@@ -259,8 +259,27 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, TouchGesturesObse
     override fun onCreate(icicle: Bundle?) {
         super.onCreate(icicle)
 
-        // mpv-tv: copy assets to external config dir (ADB-writable)
-        Utils.copyAssets(this, getExternalFilesDir(null) ?: filesDir)
+        // mpv-tv: verify external storage + permissions at startup
+        val extDir = getExternalFilesDir(null)
+        if (extDir == null || !extDir.canWrite()) {
+            Log.w(TAG, "mpv-tv: external files dir not writable, falling back to internal")
+            android.widget.Toast.makeText(this,
+                "Warning: external storage unavailable. Config files won't be ADB-editable.",
+                android.widget.Toast.LENGTH_LONG).show()
+        }
+        val configTarget = extDir ?: filesDir
+        // verify we can actually write
+        try {
+            val testFile = java.io.File(configTarget, ".mpvtv-write-test")
+            testFile.writeText("ok")
+            testFile.delete()
+        } catch (e: Exception) {
+            Log.e(TAG, "mpv-tv: config dir not writable: ${configTarget.absolutePath}", e)
+            android.widget.Toast.makeText(this,
+                "Error: cannot write to config directory. Check storage permissions.",
+                android.widget.Toast.LENGTH_LONG).show()
+        }
+        Utils.copyAssets(this, configTarget)
         BackgroundPlaybackService.createNotificationChannel(this)
 
         binding = PlayerBinding.inflate(layoutInflater)
@@ -309,8 +328,8 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, TouchGesturesObse
         }
 
         player.addObserver(this)
-        // mpv-tv: use external files dir (ADB-writable) instead of internal filesDir
-        val configDir = getExternalFilesDir(null)?.path ?: filesDir.path
+        // mpv-tv: use the same verified dir from startup
+        val configDir = (getExternalFilesDir(null) ?: filesDir).path
         TvDefaults.ensureDefaults(this, configDir)
         MpvTvConfig.load(configDir) // mpv-tv: load custom options
         WatchHistoryManager.init(this) // mpv-tv: watch history
@@ -326,6 +345,15 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, TouchGesturesObse
             onLongPressSeek = { sec -> MPVLib.command(arrayOf("seek", sec.toString(), "relative")) },
             onQuickPanel = { quickPanel?.toggle() }
         ) // mpv-tv: D-pad long-press
+        // mpv-tv: Shizuku status check (informational)
+        if (ShizukuHelper.isShizukuInstalled(this)) {
+            if (ShizukuHelper.isShizukuAvailable()) {
+                Log.i(TAG, "mpv-tv: Shizuku available — enhanced detection enabled")
+            } else {
+                Log.i(TAG, "mpv-tv: Shizuku installed but not running")
+            }
+        }
+
         player.initialize(configDir, cacheDir.path)
         player.playFile(filepath)
 
