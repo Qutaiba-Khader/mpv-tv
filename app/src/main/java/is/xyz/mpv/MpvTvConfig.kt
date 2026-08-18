@@ -3,6 +3,13 @@ package `is`.xyz.mpv
 import android.util.Log
 import java.io.File
 
+object MpvTvLog {
+    fun i(tag: String, msg: String) { if (MpvTvConfig.debugLogs) android.util.Log.i(tag, msg) }
+    fun w(tag: String, msg: String) { if (MpvTvConfig.debugLogs) android.util.Log.w(tag, msg) }
+    fun e(tag: String, msg: String) { android.util.Log.e(tag, msg) } // errors always log
+    fun e(tag: String, msg: String, t: Throwable) { android.util.Log.e(tag, msg, t) }
+}
+
 object MpvTvConfig {
     private const val TAG = "mpv-tv"
     private val options = mutableMapOf<String, String>()
@@ -49,4 +56,5 @@ object MpvTvConfig {
     val historyEnabled get() = getBool("mpvtv-history", true)
     val historyMax get() = getInt("mpvtv-history-max", 100)
     val longPressSeek get() = getInt("mpvtv-longpress-seek", 60)
+    val debugLogs get() = getBool("mpvtv-debug", false)
 }
