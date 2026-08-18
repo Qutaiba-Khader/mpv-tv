@@ -360,6 +360,21 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, TouchGesturesObse
             result.putExtra("position", psc.position.toInt())
             result.putExtra("duration", psc.duration.toInt())
         }
+        // mpv-tv: extended result extras
+        try {
+            val eofReached = MPVLib.getPropertyBoolean("eof-reached") ?: false
+            result.putExtra("completed", eofReached)
+            MPVLib.getPropertyString("media-title")?.let {
+                if (it.isNotEmpty()) result.putExtra("media-title", it)
+            }
+            MPVLib.getPropertyInt("width")?.let { result.putExtra("video-width", it) }
+            MPVLib.getPropertyInt("height")?.let { result.putExtra("video-height", it) }
+            MPVLib.getPropertyDouble("speed")?.let { result.putExtra("speed", it.toFloat()) }
+        } catch (_: Exception) {}
+        recordManager?.let { rm ->
+            if (rm.isRecording) rm.stop()
+            rm.lastRecordingPath?.let { result.putExtra("recording-path", it) }
+        }
         setResult(code, result)
         finish()
     }

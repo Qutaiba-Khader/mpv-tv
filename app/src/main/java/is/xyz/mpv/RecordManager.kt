@@ -16,6 +16,8 @@ class RecordManager(private val context: Context, private val overlay: Recording
     @Volatile var isRecording = false
         private set
     private var recordingFile: String? = null
+    var lastRecordingPath: String? = null // mpv-tv: for result extras
+        private set
     @Volatile private var startTime = 0L
     private val handler = Handler(Looper.getMainLooper())
     private val timerRunnable = object : Runnable {
@@ -64,6 +66,7 @@ class RecordManager(private val context: Context, private val overlay: Recording
         }
         overlay?.hide()
         val name = recordingFile?.let { File(it).name } ?: "unknown"
+        lastRecordingPath = recordingFile
         Log.i(TAG, "Recording stopped: $recordingFile")
         recordingFile = null
         return name
