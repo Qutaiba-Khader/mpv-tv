@@ -1,0 +1,38 @@
+[
+  {
+    "id": "android-tv-4k",
+    "name": "Android TV 4K",
+    "description": "Optimized for 4K Android TV devices (Google TV Streamer, Shield). GPU rendering, hardware decode, AC3/DTS passthrough.",
+    "tags": ["android-tv", "4k", "sdr", "arc"],
+    "mpv_conf": "vo=gpu\ngpu-context=android\nhwdec=mediacodec\ndither-depth=auto\naudio-spdif=ac3,dts\nvolume-max=100\nvolume=100\ndemuxer-max-bytes=150MiB\ndemuxer-readahead-secs=120\nosd-font-size=40\nosd-duration=2000\nscreenshot-format=jpg\nscreenshot-jpeg-quality=95\nsave-position-on-quit=yes",
+    "input_conf": "RIGHT seek 10\nLEFT seek -10\nFORWARD no-osd seek 30\nREWIND no-osd seek -30\n1 add audio-delay +0.1\n4 add audio-delay -0.1\n7 set audio-delay 0; show-text \"Audio delay: 0ms\" 2000\n0 set video-zoom 0; no-osd set panscan 0; no-osd set video-pan-x 0; no-osd set video-pan-y 0; no-osd set video-align-x 0; no-osd set video-align-y 0; show-text \"Zoom/Pan reset\" 1500\n3 cycle-values video-aspect-override 16:9 4:3 2.35:1 no\n2 add panscan 0.01\n5 add panscan -0.01\n8 set panscan 0.42\n6 screenshot; show-text \"Screenshot saved\" 2000\nBS show-text \"${media-title}\\n${width}x${height} ${video-codec}\" 5000\nPLAYPAUSE cycle pause\nPLAY set pause no\nPAUSE set pause yes",
+    "version": 1
+  },
+  {
+    "id": "android-tv-1080p",
+    "name": "Android TV 1080p",
+    "description": "For 1080p Android TV boxes with weaker hardware. Conservative settings, smaller buffers.",
+    "tags": ["android-tv", "1080p", "sdr"],
+    "mpv_conf": "vo=gpu\ngpu-context=android\nhwdec=mediacodec\ndither-depth=auto\naudio-spdif=ac3\nvolume-max=100\nvolume=100\ndemuxer-max-bytes=64MiB\ndemuxer-readahead-secs=60\nosd-font-size=36\nosd-duration=2000\nscreenshot-format=jpg\nsave-position-on-quit=yes",
+    "input_conf": "RIGHT seek 10\nLEFT seek -10\nPLAYPAUSE cycle pause\n6 screenshot\nBS show-text \"${media-title}\" 3000",
+    "version": 1
+  },
+  {
+    "id": "low-latency-live",
+    "name": "Low Latency Live",
+    "description": "For live stream playback (TikTok, RTMP, HLS). Minimal buffering, fast start.",
+    "tags": ["live", "low-latency", "streaming"],
+    "mpv_conf": "vo=gpu\ngpu-context=android\nhwdec=mediacodec\nprofile=low-latency\naudio-spdif=ac3\nvolume-max=100\nvolume=100\nosd-font-size=40\nosd-duration=2000",
+    "input_conf": "RIGHT seek 5\nLEFT seek -5\nPLAYPAUSE cycle pause",
+    "version": 1
+  },
+  {
+    "id": "minimal",
+    "name": "Minimal",
+    "description": "Bare minimum config. Hardware decode, no extras. Good starting point for custom configs.",
+    "tags": ["minimal", "clean"],
+    "mpv_conf": "vo=gpu\ngpu-context=android\nhwdec=mediacodec\nvolume-max=100",
+    "input_conf": "RIGHT seek 10\nLEFT seek -10\nPLAYPAUSE cycle pause",
+    "version": 1
+  }
+]
