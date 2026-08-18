@@ -144,12 +144,17 @@ class QuickSettingsPanel(private val context: Context, private val parent: ViewG
 
     fun handleKey(event: KeyEvent): Boolean {
         if (!isVisible) return false
-        if (event.action != KeyEvent.ACTION_DOWN) return true
-        if (event.keyCode == KeyEvent.KEYCODE_BACK || event.keyCode == KeyEvent.KEYCODE_ESCAPE) {
-            hide()
-            return true
+        if (event.action == KeyEvent.ACTION_DOWN) {
+            if (event.keyCode == KeyEvent.KEYCODE_BACK || event.keyCode == KeyEvent.KEYCODE_ESCAPE) {
+                hide()
+                return true
+            }
         }
-        return false
+        // consume both ACTION_DOWN and ACTION_UP for non-navigation keys while panel is open
+        // but let volume/media keys through
+        if (event.keyCode == KeyEvent.KEYCODE_VOLUME_UP || event.keyCode == KeyEvent.KEYCODE_VOLUME_DOWN ||
+            event.keyCode == KeyEvent.KEYCODE_MUTE) return false
+        return true
     }
 
     private fun dp(v: Int): Int = TypedValue.applyDimension(

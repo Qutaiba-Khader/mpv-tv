@@ -4,12 +4,13 @@ import android.content.Context
 import android.util.Log
 import org.json.JSONArray
 import java.io.File
+import java.util.Collections
 
 object UrlHistoryManager {
     private const val TAG = "mpv-tv"
     private const val FILENAME = "url_history.json"
     private const val MAX_ENTRIES = 50
-    private val history = mutableListOf<String>()
+    private val history = Collections.synchronizedList(mutableListOf<String>())
     private var historyFile: File? = null
 
     fun init(context: Context) {
@@ -19,22 +20,24 @@ object UrlHistoryManager {
 
     fun addUrl(url: String) {
         if (url.isBlank()) return
-        history.remove(url)
-        history.add(0, url)
-        while (history.size > MAX_ENTRIES) history.removeLast()
-        save()
+        synchronized(history) {
+            history.remove(url)
+            history.add(0, url)
+            while (history.size > MAX_ENTRIES) history.removeLast()
+        }
+        saveAsync()
     }
 
-    fun getHistory(): List<String> = history.toList()
+    fun getHistory(): List<String> = synchronized(history) { history.toList() }
 
     fun removeUrl(url: String) {
-        history.remove(url)
-        save()
+        synchronized(history) { history.remove(url) }
+        saveAsync()
     }
 
     fun clear() {
-        history.clear()
-        save()
+        synchronized(history) { history.clear() }
+        saveAsync()
     }
 
     fun parseM3u(content: String): List<Pair<String, String>> {
@@ -62,22 +65,30 @@ object UrlHistoryManager {
         if (!file.exists()) return
         try {
             val arr = JSONArray(file.readText())
-            history.clear()
-            for (i in 0 until arr.length()) history.add(arr.getString(i))
-            Log.i(TAG, "Loaded ${history.size} URL history entries")
+            val loaded = mutableListOf<String>()
+            for (i in 0 until arr.length()) loaded.add(arr.getString(i))
+            synchronized(history) {
+                history.clear()
+                history.addAll(loaded)
+            }
+            Log.i(TAG, "Loaded ${loaded.size} URL history entries")
         } catch (e: Exception) {
             Log.w(TAG, "Failed to load URL history: ${e.message}")
         }
     }
 
-    private fun save() {
-        val file = historyFile ?: return
-        try {
-            val arr = JSONArray()
-            history.forEach { arr.put(it) }
-            file.writeText(arr.toString(2))
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to save URL history: ${e.message}")
-        }
+    private fun saveAsync() {
+        Thread {
+            val file = historyFile ?: return@Thread
+            try {
+                val arr = JSONArray()
+                synchronized(history) { history.forEach { arr.put(it) } }
+                val tmp = File(file.parent, "${file.name}.tmp")
+                tmp.writeText(arr.toString(2))
+                tmp.renameTo(file)
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to save URL history: ${e.message}")
+            }
+        }.start()
     }
 }
