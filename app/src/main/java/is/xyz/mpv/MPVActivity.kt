@@ -326,6 +326,11 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, TouchGesturesObse
         player.initialize(configDir, cacheDir.path)
         player.playFile(filepath)
 
+        // mpv-tv: show bridge APK prompt on first launch
+        if (BridgeInstaller.shouldShowFirstRunPrompt(this)) {
+            player.postDelayed({ BridgeInstaller.showBridgeDialog(this, isFirstRun = true) }, 2000)
+        }
+
         mediaSession = initMediaSession()
         updateMediaSession()
         with (BackgroundPlaybackService) {

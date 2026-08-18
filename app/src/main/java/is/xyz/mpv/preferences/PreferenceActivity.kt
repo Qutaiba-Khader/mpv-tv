@@ -3,6 +3,7 @@ package `is`.xyz.mpv.preferences
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.os.Build
+import `is`.xyz.mpv.BridgeInstaller
 import android.os.Bundle
 import android.view.MenuItem
 import android.widget.FrameLayout
@@ -110,6 +111,16 @@ class PreferenceActivity : AppCompatActivity(),
     class SettingsFragment : PreferenceFragmentCompat() {
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
             setPreferencesFromResource(R.xml.preferences_root, rootKey)
+            // mpv-tv: bridge APK settings entry
+            findPreference<Preference>("bridge_apk")?.apply {
+                val installed = BridgeInstaller.isBridgeInstalled(requireContext())
+                summary = if (installed) "Installed — intents forwarded to mpv-tv"
+                    else "Not installed — tap to set up"
+                setOnPreferenceClickListener {
+                    BridgeInstaller.showBridgeDialog(requireActivity())
+                    true
+                }
+            }
         }
     }
 

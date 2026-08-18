@@ -32,6 +32,13 @@
         app:summary="@string/pref_header_advanced_summary"
         app:title="@string/pref_header_advanced" />
 
+    <!-- mpv-tv: bridge APK installer -->
+    <Preference
+        app:key="bridge_apk"
+        app:icon="@drawable/round_settings_24"
+        app:summary="Forward intents from is.xyz.mpv to mpv-tv"
+        app:title="Bridge APK" />
+
     <Preference
         app:icon="@drawable/round_info_24"
         app:summary="@string/pref_header_about_mpv_summary"
