@@ -11,7 +11,6 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
 
         supportActionBar?.setTitle(R.string.mpv_activity)
 
-        // mpv-tv: startup checks (visible to user from launcher)
         if (savedInstanceState == null) {
             runStartupChecks()
 
@@ -24,20 +23,36 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
     }
 
     private fun runStartupChecks() {
+        val status = mutableListOf<String>()
+
+        // storage check
         val extDir = getExternalFilesDir(null)
         if (extDir != null && extDir.canWrite()) {
             TvDefaults.ensureDefaults(this, extDir.path)
             MpvTvConfig.load(extDir.path)
             WatchHistoryManager.init(this)
             UrlHistoryManager.init(this)
+            status.add("Storage: OK")
             Log.i("mpv-tv", "Config: ${extDir.absolutePath}")
         } else {
-            Log.w("mpv-tv", "External files dir not writable, using internal")
+            status.add("Storage: internal only")
+            Log.w("mpv-tv", "External files dir not writable")
         }
 
+        // shizuku check
         if (ShizukuHelper.isShizukuInstalled(this)) {
-            Log.i("mpv-tv", "Shizuku ${if (ShizukuHelper.isShizukuAvailable()) "available" else "not running"}")
+            val available = ShizukuHelper.isShizukuAvailable()
+            status.add("Shizuku: ${if (available) "ready" else "not running"}")
+            Log.i("mpv-tv", "Shizuku ${if (available) "available" else "not running"}")
         }
+
+        // show status in action bar subtitle (visible but not intrusive)
+        supportActionBar?.subtitle = status.joinToString(" · ")
+
+        // clear subtitle after 5 seconds
+        window.decorView.postDelayed({
+            if (!isFinishing && !isDestroyed) supportActionBar?.subtitle = null
+        }, 5000)
 
         // first-run prompts
         val prefs = getSharedPreferences("mpvtv", MODE_PRIVATE)
@@ -45,7 +60,6 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
         val showPreset = !prefs.getBoolean("preset_picked", false)
 
         if (showBridge) {
-            // bridge first, then preset after bridge dialog dismissed
             BridgeInstaller.showBridgeDialog(this, isFirstRun = true, onDismiss = {
                 if (showPreset) showPresetPicker(prefs)
             })
