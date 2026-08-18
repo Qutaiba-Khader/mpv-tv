@@ -261,7 +261,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, TouchGesturesObse
 
         // mpv-tv: verify external storage at startup with visible feedback
         val extDir = getExternalFilesDir(null)
-        val configTarget: java.io.File
+        var configTarget: java.io.File
         if (extDir == null || !extDir.canWrite()) {
             Log.w(TAG, "mpv-tv: external files dir not writable, falling back to internal")
             android.widget.Toast.makeText(this,
