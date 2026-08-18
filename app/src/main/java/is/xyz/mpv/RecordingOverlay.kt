@@ -4,9 +4,8 @@ import android.content.Context
 import android.graphics.Color
 import android.graphics.Typeface
 import android.util.TypedValue
-import android.view.Gravity
 import android.view.ViewGroup
-import android.widget.FrameLayout
+import android.widget.RelativeLayout
 import android.widget.TextView
 
 class RecordingOverlay(context: Context, parent: ViewGroup) {
@@ -23,14 +22,16 @@ class RecordingOverlay(context: Context, parent: ViewGroup) {
             visibility = android.view.View.GONE
 
             val config = MpvTvConfig
-            val gravity = when (config.recordIndicatorPosition) {
-                "top-left" -> Gravity.TOP or Gravity.START
-                else -> Gravity.TOP or Gravity.END
+            layoutParams = RelativeLayout.LayoutParams(
+                RelativeLayout.LayoutParams.WRAP_CONTENT,
+                RelativeLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                addRule(RelativeLayout.ALIGN_PARENT_TOP)
+                if (config.recordIndicatorPosition == "top-left")
+                    addRule(RelativeLayout.ALIGN_PARENT_START)
+                else
+                    addRule(RelativeLayout.ALIGN_PARENT_END)
             }
-            layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.WRAP_CONTENT,
-                FrameLayout.LayoutParams.WRAP_CONTENT
-            ).apply { this.gravity = gravity }
         }
         parent.addView(indicator)
     }

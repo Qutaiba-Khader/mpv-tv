@@ -5,10 +5,9 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.util.TypedValue
-import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
-import android.widget.FrameLayout
+import android.widget.RelativeLayout
 
 class MiniSeekBar(context: Context, parent: ViewGroup) : View(context) {
     private val progressPaint = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -25,9 +24,9 @@ class MiniSeekBar(context: Context, parent: ViewGroup) : View(context) {
             TypedValue.COMPLEX_UNIT_DIP, heightDp.toFloat(), context.resources.displayMetrics
         ).toInt()
 
-        layoutParams = FrameLayout.LayoutParams(
-            FrameLayout.LayoutParams.MATCH_PARENT, heightPx
-        ).apply { gravity = Gravity.BOTTOM }
+        layoutParams = RelativeLayout.LayoutParams(
+            RelativeLayout.LayoutParams.MATCH_PARENT, heightPx
+        ).apply { addRule(RelativeLayout.ALIGN_PARENT_BOTTOM) }
 
         alpha = config.seekbarOpacity
         mode = config.seekbarMode
