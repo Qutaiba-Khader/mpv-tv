@@ -15,6 +15,16 @@ object TvDefaults {
 
         copyDefaultIfMissing(context.assets, "mpv.conf", File(configDir, "mpv.conf"))
         copyDefaultIfMissing(context.assets, "input.conf", File(configDir, "input.conf"))
+
+        // mpv-tv: ensure screenshot-directory points to external dir (not /)
+        val confFile = File(configDir, "mpv.conf")
+        if (confFile.exists()) {
+            val content = confFile.readText()
+            if (!content.contains("screenshot-directory=")) {
+                confFile.appendText("\nscreenshot-directory=$configDir\n")
+                Log.i(TAG, "Added screenshot-directory=$configDir to mpv.conf")
+            }
+        }
     }
 
     private fun copyDefaultIfMissing(assets: AssetManager, name: String, target: File) {

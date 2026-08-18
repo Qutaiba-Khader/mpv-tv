@@ -154,6 +154,9 @@ class QuickSettingsPanel(private val context: Context, private val parent: ViewG
             highlightOption(2, if (currentAspect == "no" || currentAspect == "-1") "Auto" else currentAspect)
             highlightOption(3, if (currentDeband) "ON" else "OFF")
             highlightOption(4, if (currentDeinterlace) "ON" else "OFF")
+            // mpv-tv: highlight Record row based on stream-record property
+            val recording = (MPVLib.getPropertyString("stream-record") ?: "").isNotEmpty()
+            highlightOption(5, if (recording) "Start" else "Stop")
         } catch (_: Exception) {}
     }
 
