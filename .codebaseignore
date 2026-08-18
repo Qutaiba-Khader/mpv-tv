@@ -1,0 +1,17 @@
+buildscripts/
+app/src/main/jni/
+fastlane/
+docs/
+gradle/
+*.sh
+*.py
+*.c
+*.h
+*.mk
+gradlew
+*.xml
+*.png
+*.jpg
+*.webp
+*.svg
+*.properties
