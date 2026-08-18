@@ -10,4 +10,3 @@ obj
 build/
 local.properties
 *~
-.github/workflows/

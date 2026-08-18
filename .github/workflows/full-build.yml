@@ -1,0 +1,54 @@
+name: Full Native Build
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Install NDK and build deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y autoconf automake libtool pkg-config \
+            nasm yasm python3 python3-pip ninja-build meson gettext \
+            unzip wget
+          yes | ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager "ndk;27.0.12077973" || true
+          echo "ANDROID_NDK=${ANDROID_HOME}/ndk/27.0.12077973" >> $GITHUB_ENV
+
+      - name: Build native libraries
+        run: |
+          cd buildscripts
+          ./download.sh
+          ./build.sh
+        env:
+          ANDROID_NDK: ${{ env.ANDROID_NDK }}
+
+      - name: Build APK
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDefaultRelease --no-daemon
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: mpv-tv-apk
+          path: app/build/outputs/apk/default/release/*.apk
+          retention-days: 90
+
+      - name: Upload jniLibs
+        uses: actions/upload-artifact@v4
+        with:
+          name: jniLibs
+          path: app/src/main/jniLibs/
+          retention-days: 90
