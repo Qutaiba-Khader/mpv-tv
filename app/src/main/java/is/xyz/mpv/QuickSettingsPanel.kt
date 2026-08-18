@@ -134,7 +134,34 @@ class QuickSettingsPanel(private val context: Context, private val parent: ViewG
     fun show() {
         panel.visibility = View.VISIBLE
         isVisible = true
+        highlightCurrentValues()
         container.getChildAt(1)?.requestFocus()
+    }
+
+    private fun highlightCurrentValues() {
+        try {
+            val currentSpeed = MPVLib.getPropertyDouble("speed") ?: 1.0
+            val currentAspect = MPVLib.getPropertyString("video-aspect-override") ?: "no"
+            val currentDeband = MPVLib.getPropertyBoolean("deband") ?: false
+            val currentDeinterlace = MPVLib.getPropertyBoolean("deinterlace") ?: false
+            highlightOption(1, "%.1fx".format(currentSpeed).replace(".0x", "x"))
+            highlightOption(2, if (currentAspect == "no" || currentAspect == "-1") "Auto" else currentAspect)
+            highlightOption(3, if (currentDeband) "ON" else "OFF")
+            highlightOption(4, if (currentDeinterlace) "ON" else "OFF")
+        } catch (_: Exception) {}
+    }
+
+    private fun highlightOption(rowIndex: Int, activeValue: String) {
+        val row = container.getChildAt(rowIndex) as? LinearLayout ?: return
+        val optionsRow = row.getChildAt(1) as? LinearLayout ?: return
+        for (i in 0 until optionsRow.childCount) {
+            val tv = optionsRow.getChildAt(i) as? TextView ?: continue
+            val bg = tv.background as? GradientDrawable ?: continue
+            if (tv.text.toString().equals(activeValue, ignoreCase = true))
+                bg.setColor(Color.parseColor("#2196F3"))
+            else
+                bg.setColor(Color.parseColor("#333333"))
+        }
     }
 
     fun hide() {

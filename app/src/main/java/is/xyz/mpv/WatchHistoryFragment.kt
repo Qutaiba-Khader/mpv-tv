@@ -53,8 +53,13 @@ class WatchHistoryFragment : Fragment() {
     }
 
     private fun updateList() {
+        val entries = WatchHistoryManager.getEntries()
+        if (entries.isEmpty()) {
+            recyclerView?.adapter = null
+            return
+        }
         recyclerView?.adapter = HistoryAdapter(
-            WatchHistoryManager.getEntries(),
+            entries,
             onPlay = { entry ->
                 val ctx = context ?: return@HistoryAdapter
                 try {

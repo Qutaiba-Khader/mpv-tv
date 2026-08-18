@@ -12,16 +12,29 @@ import androidx.recyclerview.widget.RecyclerView
 
 class PresetPickerFragment : Fragment() {
     private var recyclerView: RecyclerView? = null
+    private var emptyView: TextView? = null
     private val presets = mutableListOf<Preset>()
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         val ctx = requireContext()
+        val root = android.widget.FrameLayout(ctx)
         recyclerView = RecyclerView(ctx).apply {
             layoutManager = LinearLayoutManager(ctx)
             setPadding(32, 16, 32, 16)
         }
+        emptyView = TextView(ctx).apply {
+            text = "No presets available"
+            textSize = 16f
+            gravity = android.view.Gravity.CENTER
+            visibility = android.view.View.GONE
+            layoutParams = android.widget.FrameLayout.LayoutParams(
+                android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
+                android.widget.FrameLayout.LayoutParams.MATCH_PARENT)
+        }
+        root.addView(recyclerView)
+        root.addView(emptyView)
         loadPresets()
-        return recyclerView!!
+        return root
     }
 
     private fun loadPresets() {
@@ -32,19 +45,35 @@ class PresetPickerFragment : Fragment() {
             presets.addAll(bundled)
             updateAdapter()
         }
-        PresetManager.fetchPresets { fetched ->
-            activity?.runOnUiThread {
-                if (fetched.isNotEmpty() && isAdded) {
-                    presets.clear()
-                    presets.addAll(fetched)
-                    updateAdapter()
+        // check network before fetch
+        val cm = ctx.getSystemService(android.content.Context.CONNECTIVITY_SERVICE) as? android.net.ConnectivityManager
+        val hasNetwork = cm?.activeNetwork != null
+        if (hasNetwork) {
+            PresetManager.fetchPresets { fetched ->
+                activity?.runOnUiThread {
+                    if (fetched.isNotEmpty() && isAdded) {
+                        presets.clear()
+                        presets.addAll(fetched)
+                        updateAdapter()
+                    }
                 }
+            }
+        } else if (presets.isEmpty()) {
+            activity?.runOnUiThread {
+                android.widget.Toast.makeText(ctx, "No network — showing bundled presets", android.widget.Toast.LENGTH_SHORT).show()
             }
         }
     }
 
     private fun updateAdapter() {
         val ctx = context ?: return
+        if (presets.isEmpty()) {
+            emptyView?.visibility = android.view.View.VISIBLE
+            recyclerView?.visibility = android.view.View.GONE
+            return
+        }
+        emptyView?.visibility = android.view.View.GONE
+        recyclerView?.visibility = android.view.View.VISIBLE
         val currentId = PresetManager.getCurrentPresetId(ctx)
         recyclerView?.adapter = PresetAdapter(presets, currentId) { preset ->
             val c = context ?: return@PresetAdapter

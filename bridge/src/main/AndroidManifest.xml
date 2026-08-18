@@ -7,6 +7,9 @@
         android:label="mpv (bridge)"
         android:supportsRtl="true">
 
+        <!-- mpv-tv: metadata tag for bridge detection (BridgeInstaller checks this) -->
+        <meta-data android:name="mpvtv.bridge" android:value="true" />
+
         <activity
             android:name=".BridgeActivity"
             android:theme="@android:style/Theme.NoDisplay"

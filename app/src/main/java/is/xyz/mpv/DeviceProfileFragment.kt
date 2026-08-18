@@ -74,6 +74,10 @@ class DeviceProfileFragment : Fragment() {
                 isFocusable = true
                 setOnClickListener {
                     val c = context ?: return@setOnClickListener
+                    if (!ShizukuHelper.isShizukuAvailable()) {
+                        Toast.makeText(c, "Shizuku is not running. Open Shizuku app and start the service.", Toast.LENGTH_LONG).show()
+                        return@setOnClickListener
+                    }
                     Thread {
                         val audio = ShizukuHelper.getAudioCapabilities()
                         val display = ShizukuHelper.getDisplayInfo()

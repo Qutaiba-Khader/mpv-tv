@@ -44,6 +44,7 @@ class ScreenshotGalleryFragment : Fragment() {
         val shots = ScreenshotGallery.getScreenshots(ctx)
         if (shots.isEmpty()) {
             recyclerView?.adapter = null
+            android.widget.Toast.makeText(ctx, "No screenshots yet", android.widget.Toast.LENGTH_SHORT).show()
             return
         }
         recyclerView?.adapter = GalleryAdapter(shots) { entry ->

@@ -42,7 +42,7 @@ class RecordManager(private val context: Context, private val overlay: Recording
         startTime = System.currentTimeMillis()
 
         try {
-            MPVLib.setOptionString("stream-record", file.absolutePath)
+            MPVLib.setPropertyString("stream-record", file.absolutePath)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start recording: ${e.message}")
             return "error"
@@ -58,7 +58,7 @@ class RecordManager(private val context: Context, private val overlay: Recording
         isRecording = false
         handler.removeCallbacks(timerRunnable)
         try {
-            MPVLib.setOptionString("stream-record", "")
+            MPVLib.setPropertyString("stream-record", "")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to stop recording: ${e.message}")
         }

@@ -75,7 +75,7 @@
         app:title="@string/pref_header_about_mpv">
         <intent
             android:targetClass="is.xyz.mpv.preferences.AboutActivity"
-            android:targetPackage="is.xyz.mpv" />
+            android:targetPackage="com.qutaiba.mpvtv" /> <!-- mpv-tv: our package -->
     </Preference>
 
 </PreferenceScreen>

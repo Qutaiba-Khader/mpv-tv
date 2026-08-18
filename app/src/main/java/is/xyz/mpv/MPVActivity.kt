@@ -87,7 +87,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, TouchGesturesObse
     private lateinit var gestures: TouchGestures
     private var recordManager: RecordManager? = null // mpv-tv: recording toggle
     private var currentFilepath: String? = null // mpv-tv: for watch history
-    private var miniSeekBar: MiniSeekBar? = null // mpv-tv: thin progress line
+    private var miniSeekBarEnabled = false // mpv-tv: thin seekbar style
     private var quickPanel: QuickSettingsPanel? = null // mpv-tv: quick settings overlay
     private var longPressHandler: LongPressHandler? = null // mpv-tv: D-pad long-press
 
@@ -314,10 +314,13 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, TouchGesturesObse
         TvDefaults.ensureDefaults(this, configDir)
         MpvTvConfig.load(configDir) // mpv-tv: load custom options
         WatchHistoryManager.init(this) // mpv-tv: watch history
+        UrlHistoryManager.init(this) // mpv-tv: URL history
         val rootView = binding.root as ViewGroup
         val recOverlay = RecordingOverlay(this, rootView) // mpv-tv
         recordManager = RecordManager(this, recOverlay) // mpv-tv: recording toggle
-        miniSeekBar = MiniSeekBar(this, rootView) // mpv-tv: thin seek bar
+        // mpv-tv: apply mini seekbar style if configured
+        miniSeekBarEnabled = MpvTvConfig.getString("mpvtv-seekbar", "normal") == "mini"
+        if (miniSeekBarEnabled) applyMiniSeekbarStyle()
         quickPanel = QuickSettingsPanel(this, rootView) // mpv-tv: quick settings
         longPressHandler = LongPressHandler(
             onLongPressSeek = { sec -> MPVLib.command(arrayOf("seek", sec.toString(), "relative")) },
@@ -326,9 +329,34 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, TouchGesturesObse
         player.initialize(configDir, cacheDir.path)
         player.playFile(filepath)
 
-        // mpv-tv: show bridge APK prompt on first launch
+        // mpv-tv: first launch prompts
+        val prefs = getSharedPreferences("mpvtv", MODE_PRIVATE)
         if (BridgeInstaller.shouldShowFirstRunPrompt(this)) {
             player.postDelayed({ BridgeInstaller.showBridgeDialog(this, isFirstRun = true) }, 2000)
+        }
+        if (!prefs.getBoolean("preset_picked", false)) {
+            player.postDelayed({
+                if (isFinishing || isDestroyed) return@postDelayed
+                val profile = DeviceProfileManager.detect(this)
+                val presets = PresetManager.loadBundledPresets(this)
+                if (presets.isNotEmpty()) {
+                    val recommended = presets.firstOrNull { it.id == profile.recommendedPreset }
+                    val msg = if (recommended != null)
+                        "Recommended for ${profile.model}: ${recommended.name}\n\nApply it?"
+                    else "Choose a preset in Settings > Presets."
+                    android.app.AlertDialog.Builder(this)
+                        .setTitle("First Run — Config Preset")
+                        .setMessage(msg)
+                        .setPositiveButton(recommended?.let { "Apply: ${it.name}" } ?: "OK") { _, _ ->
+                            recommended?.let { PresetManager.applyPreset(this, it) }
+                            prefs.edit().putBoolean("preset_picked", true).apply()
+                        }
+                        .setNegativeButton("Skip") { _, _ ->
+                            prefs.edit().putBoolean("preset_picked", true).apply()
+                        }
+                        .show()
+                }
+            }, 4000)
         }
 
         mediaSession = initMediaSession()
@@ -398,11 +426,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, TouchGesturesObse
 
         recordManager?.destroy() // mpv-tv: stop recording on exit
         longPressHandler?.destroy() // mpv-tv
-        // mpv-tv: save watch history on exit
-        val title = MPVLib.getPropertyString("media-title") ?: ""
-        val pos = (MPVLib.getPropertyDouble("time-pos") ?: 0.0).toLong()
-        val dur = (MPVLib.getPropertyDouble("duration") ?: 0.0).toLong()
-        if (dur > 0) WatchHistoryManager.addEntry(currentFilepath ?: "", title, pos, dur)
+        // mpv-tv: history already saved in onPause, no need to duplicate here
         player.removeObserver(this)
         player.destroy()
         super.onDestroy()
@@ -497,6 +521,13 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, TouchGesturesObse
 
         activityIsForeground = false
         eventUiHandler.removeCallbacksAndMessages(null)
+        // mpv-tv: save watch history on every pause (app might be killed without onDestroy)
+        try {
+            val title = MPVLib.getPropertyString("media-title") ?: ""
+            val pos = (MPVLib.getPropertyDouble("time-pos") ?: 0.0).toLong()
+            val dur = (MPVLib.getPropertyDouble("duration") ?: 0.0).toLong()
+            if (dur > 0) WatchHistoryManager.addEntry(currentFilepath ?: "", title, pos, dur)
+        } catch (_: Exception) {}
         if (isFinishing) {
             savePosition()
             // tell mpv to shut down so that any other property changes or such are ignored,
@@ -1295,6 +1326,33 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, TouchGesturesObse
             "$trackPrefix $trackName"
         }
         showToast(msg, true)
+    }
+
+    // mpv-tv: mini seekbar style — thin line, no time labels, always visible at bottom
+    private fun applyMiniSeekbarStyle() {
+        val seekbar = binding.playbackSeekbar
+        val group = binding.controlsSeekbarGroup
+
+        // hide time labels and prev/next buttons, keep only seekbar
+        binding.playbackPositionTxt.visibility = View.GONE
+        binding.playbackDurationTxt.visibility = View.GONE
+        binding.prevBtn.visibility = View.GONE
+        binding.nextBtn.visibility = View.GONE
+
+        // restyle seekbar: thin, semi-transparent
+        seekbar.minimumHeight = 6
+        seekbar.maxHeight = 6
+        seekbar.thumb = null
+        seekbar.alpha = MpvTvConfig.seekbarOpacity
+
+        // move seekbar group to bottom of screen by adjusting layout
+        val params = group.layoutParams
+        if (params is android.widget.RelativeLayout.LayoutParams) {
+            params.removeRule(android.widget.RelativeLayout.ABOVE)
+            params.addRule(android.widget.RelativeLayout.ALIGN_PARENT_BOTTOM)
+            params.height = android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+            group.layoutParams = params
+        }
     }
 
     // mpv-tv: recording toggle with OSD feedback

@@ -6,6 +6,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
+import android.provider.Settings
 import android.util.Log
 import androidx.core.content.FileProvider
 import java.io.File
@@ -13,6 +15,7 @@ import java.io.File
 object BridgeInstaller {
     private const val TAG = "mpv-tv"
     private const val BRIDGE_PACKAGE = "is.xyz.mpv"
+    private const val BRIDGE_META_KEY = "mpvtv.bridge"
     private const val PREF_KEY = "bridge_prompt_shown"
 
     fun isBridgeInstalled(context: Context): Boolean {
@@ -25,9 +28,10 @@ object BridgeInstaller {
     fun isStockMpvInstalled(context: Context): Boolean {
         if (!isBridgeInstalled(context)) return false
         return try {
-            val info = context.packageManager.getApplicationInfo(BRIDGE_PACKAGE, 0)
-            val label = context.packageManager.getApplicationLabel(info).toString()
-            label != "mpv (bridge)"
+            val info = context.packageManager.getApplicationInfo(
+                BRIDGE_PACKAGE, PackageManager.GET_META_DATA)
+            val isBridge = info.metaData?.getBoolean(BRIDGE_META_KEY, false) ?: false
+            !isBridge
         } catch (_: Exception) { false }
     }
 
@@ -65,7 +69,11 @@ object BridgeInstaller {
 
         if (!installed && !isStock) {
             builder.setPositiveButton("Install Bridge") { _, _ ->
-                installBridgeFromAssets(activity)
+                if (canInstallPackages(activity)) {
+                    installBridgeFromAssets(activity)
+                } else {
+                    requestInstallPermission(activity)
+                }
             }
         }
 
@@ -90,6 +98,28 @@ object BridgeInstaller {
         builder.show()
     }
 
+    private fun canInstallPackages(context: Context): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            context.packageManager.canRequestPackageInstalls()
+        } else true
+    }
+
+    private fun requestInstallPermission(activity: Activity) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            AlertDialog.Builder(activity)
+                .setTitle("Permission Required")
+                .setMessage("To install the bridge APK, allow mpv-tv to install unknown apps in Settings.")
+                .setPositiveButton("Open Settings") { _, _ ->
+                    val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
+                        data = Uri.parse("package:${activity.packageName}")
+                    }
+                    activity.startActivity(intent)
+                }
+                .setNegativeButton("Cancel", null)
+                .show()
+        }
+    }
+
     private fun installBridgeFromAssets(activity: Activity) {
         try {
             val bridgeApk = File(activity.cacheDir, "mpv-tv-bridge.apk")
@@ -107,11 +137,11 @@ object BridgeInstaller {
             Log.i(TAG, "Launched bridge APK installer")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to install bridge: ${e.message}")
-            val builder = AlertDialog.Builder(activity)
+            AlertDialog.Builder(activity)
                 .setTitle("Bridge APK")
                 .setMessage("Bridge APK not bundled in this build. Download it from the mpv-tv GitHub releases page.")
                 .setPositiveButton("OK", null)
-            builder.show()
+                .show()
         }
     }
 }
