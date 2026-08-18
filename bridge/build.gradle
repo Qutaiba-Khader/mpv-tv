@@ -1,9 +1,8 @@
 apply plugin: 'com.android.application'
-apply plugin: 'kotlin-android'
 
 android {
     namespace 'is.xyz.mpv'
-    compileSdk = 36
+    compileSdk 36
 
     defaultConfig {
         applicationId "is.xyz.mpv"
@@ -12,8 +11,4 @@ android {
         versionCode 1
         versionName "1.0.0-bridge"
     }
-}
-
-dependencies {
-    implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 }
