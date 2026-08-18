@@ -7,6 +7,7 @@ import org.json.JSONObject
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
+import java.util.Collections
 
 data class Preset(
     val id: String,
@@ -81,9 +82,10 @@ object PresetManager {
 
     fun getCurrentPresetId(context: Context): String? {
         val dir = context.getExternalFilesDir(null) ?: context.filesDir
-        val currentConf = File(dir, "mpv.conf").let { if (it.exists()) it.readText() else "" }
+        val confFile = File(dir, "mpv.conf")
+        val currentConf = if (confFile.exists()) confFile.readText() else ""
         return synchronized(presets) {
-            presets.firstOrNull { it.mpvConf.trim() == currentConf.trim() }?.id
+            presets.firstOrNull { p -> p.mpvConf.trim() == currentConf.trim() }?.id
         }
     }
 
