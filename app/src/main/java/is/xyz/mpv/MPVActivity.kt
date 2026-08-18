@@ -85,6 +85,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, TouchGesturesObse
 
     private lateinit var binding: PlayerBinding
     private lateinit var gestures: TouchGestures
+    private var recordManager: RecordManager? = null // mpv-tv: recording toggle
 
     // convenience alias
     private val player get() = binding.player
@@ -306,6 +307,9 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, TouchGesturesObse
         // mpv-tv: use external files dir (ADB-writable) instead of internal filesDir
         val configDir = getExternalFilesDir(null)?.path ?: filesDir.path
         TvDefaults.ensureDefaults(this, configDir)
+        MpvTvConfig.load(configDir) // mpv-tv: load custom options
+        val recOverlay = RecordingOverlay(this, binding.root as ViewGroup) // mpv-tv
+        recordManager = RecordManager(recOverlay) // mpv-tv: recording toggle
         player.initialize(configDir, cacheDir.path)
         player.playFile(filepath)
 
@@ -374,6 +378,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, TouchGesturesObse
         // take the background service with us
         stopServiceRunnable.run()
 
+        recordManager?.destroy() // mpv-tv: stop recording on exit
         player.removeObserver(this)
         player.destroy()
         super.onDestroy()
@@ -963,6 +968,9 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, TouchGesturesObse
             // (overrides a default binding)
             KeyEvent.KEYCODE_ENTER -> player.cyclePause()
 
+            // mpv-tv: recording toggle on RECORD key or KEYCODE_R
+            KeyEvent.KEYCODE_MEDIA_RECORD -> toggleRecording()
+
             else -> unhandled++
         }
 
@@ -1203,6 +1211,16 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, TouchGesturesObse
             "$trackPrefix $trackName"
         }
         showToast(msg, true)
+    }
+
+    // mpv-tv: recording toggle with OSD feedback
+    private fun toggleRecording() {
+        val rm = recordManager ?: return
+        val name = rm.toggle()
+        if (rm.isRecording)
+            showToast("REC started: $name")
+        else
+            showToast("REC saved: $name")
     }
 
     private fun cycleAudio() = trackSwitchNotification {
