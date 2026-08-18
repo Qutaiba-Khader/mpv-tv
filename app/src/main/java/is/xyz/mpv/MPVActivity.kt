@@ -254,8 +254,8 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, TouchGesturesObse
     override fun onCreate(icicle: Bundle?) {
         super.onCreate(icicle)
 
-        // Do these here and not in MainActivity because mpv can be launched from a file browser
-        Utils.copyAssets(this)
+        // mpv-tv: copy assets to external config dir (ADB-writable)
+        Utils.copyAssets(this, getExternalFilesDir(null) ?: filesDir)
         BackgroundPlaybackService.createNotificationChannel(this)
 
         binding = PlayerBinding.inflate(layoutInflater)
@@ -303,7 +303,10 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, TouchGesturesObse
         }
 
         player.addObserver(this)
-        player.initialize(filesDir.path, cacheDir.path)
+        // mpv-tv: use external files dir (ADB-writable) instead of internal filesDir
+        val configDir = getExternalFilesDir(null)?.path ?: filesDir.path
+        TvDefaults.ensureDefaults(this, configDir)
+        player.initialize(configDir, cacheDir.path)
         player.playFile(filepath)
 
         mediaSession = initMediaSession()

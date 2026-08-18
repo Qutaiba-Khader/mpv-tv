@@ -90,10 +90,11 @@ internal object Utils {
         }
     }
 
-    fun copyAssets(context: Context) {
+    // mpv-tv: accept target dir param (external files dir, ADB-writable)
+    fun copyAssets(context: Context, targetDir: File? = null) {
         val assetManager = context.assets
         val files = arrayOf("cacert.pem")
-        val configDir = context.filesDir.path
+        val configDir = (targetDir ?: context.filesDir).path
 
         for (name in files) {
             copyAssetFile(assetManager, name, File("$configDir/$name"))

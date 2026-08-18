@@ -1,1 +1,2 @@
 include ':app'
+include ':bridge' // mpv-tv: intent forwarding APK (is.xyz.mpv → com.qutaiba.mpvtv)

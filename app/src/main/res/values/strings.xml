@@ -3,8 +3,8 @@
      them to be changed based on the locale and options. -->
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
     <!-- Simple strings. -->
-    <string name="mpv_activity">mpv</string>
-    <string name="label_share_intent">Play in mpv</string>
+    <string name="mpv_activity">mpv-tv</string> <!-- mpv-tv: app display name -->
+    <string name="label_share_intent">Play in mpv-tv</string> <!-- mpv-tv: share label -->
     <string name="title_activity_settings">Settings</string>
     <string name="dialog_ok">OK</string>
     <string name="dialog_cancel">Cancel</string>

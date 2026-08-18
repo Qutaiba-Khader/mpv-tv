@@ -8,11 +8,12 @@ android {
     compileSdk = 36
 
     defaultConfig {
+        applicationId "com.qutaiba.mpvtv" // mpv-tv: own package identity (bridge APK handles is.xyz.mpv intents)
         minSdkVersion 23
         targetSdk 36
 
-        versionCode 47
-        versionName "2026-08-11-release"
+        versionCode 1
+        versionName "1.0.0" // mpv-tv: independent versioning
 
         vectorDrawables.useSupportLibrary = true
     }
