@@ -2,7 +2,6 @@ package `is`.xyz.mpv
 
 import android.content.SharedPreferences
 import android.os.Bundle
-import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 
 class MainActivity : AppCompatActivity(R.layout.activity_main) {
@@ -33,17 +32,17 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
             WatchHistoryManager.init(this)
             UrlHistoryManager.init(this)
             status.add("Storage: OK")
-            Log.i("mpv-tv", "Config: ${extDir.absolutePath}")
+            MpvTvLog.i("mpv-tv", "Config: ${extDir.absolutePath}")
         } else {
             status.add("Storage: internal only")
-            Log.w("mpv-tv", "External files dir not writable")
+            MpvTvLog.w("mpv-tv", "External files dir not writable")
         }
 
         // shizuku check
         if (ShizukuHelper.isShizukuInstalled(this)) {
             val available = ShizukuHelper.isShizukuAvailable()
             status.add("Shizuku: ${if (available) "ready" else "not running"}")
-            Log.i("mpv-tv", "Shizuku ${if (available) "available" else "not running"}")
+            MpvTvLog.i("mpv-tv", "Shizuku ${if (available) "available" else "not running"}")
         }
 
         // show status in action bar subtitle (visible but not intrusive)
