@@ -316,7 +316,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, TouchGesturesObse
         WatchHistoryManager.init(this) // mpv-tv: watch history
         val rootView = binding.root as ViewGroup
         val recOverlay = RecordingOverlay(this, rootView) // mpv-tv
-        recordManager = RecordManager(recOverlay) // mpv-tv: recording toggle
+        recordManager = RecordManager(this, recOverlay) // mpv-tv: recording toggle
         miniSeekBar = MiniSeekBar(this, rootView) // mpv-tv: thin seek bar
         quickPanel = QuickSettingsPanel(this, rootView) // mpv-tv: quick settings
         longPressHandler = LongPressHandler(

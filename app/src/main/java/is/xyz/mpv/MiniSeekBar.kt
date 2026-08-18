@@ -13,13 +13,14 @@ class MiniSeekBar(context: Context, parent: ViewGroup) : View(context) {
     private val progressPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val bufferPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private var progress = 0f
-    private var bufferProgress = 0f
+    @Volatile private var progress = 0f
+    @Volatile private var bufferProgress = 0f
     private var mode = "always"
+    private var hideRunnable: Runnable? = null
 
     init {
         val config = MpvTvConfig
-        val heightDp = config.seekbarHeight
+        val heightDp = maxOf(1, config.seekbarHeight)
         val heightPx = TypedValue.applyDimension(
             TypedValue.COMPLEX_UNIT_DIP, heightDp.toFloat(), context.resources.displayMetrics
         ).toInt()
@@ -28,13 +29,11 @@ class MiniSeekBar(context: Context, parent: ViewGroup) : View(context) {
             RelativeLayout.LayoutParams.MATCH_PARENT, heightPx
         ).apply { addRule(RelativeLayout.ALIGN_PARENT_BOTTOM) }
 
-        alpha = config.seekbarOpacity
+        alpha = config.seekbarOpacity.coerceIn(0f, 1f)
         mode = config.seekbarMode
 
-        try { progressPaint.color = Color.parseColor(config.seekbarColor) }
-        catch (_: Exception) { progressPaint.color = Color.parseColor("#FF4444") }
-        try { bufferPaint.color = Color.parseColor(config.seekbarBufferColor) }
-        catch (_: Exception) { bufferPaint.color = Color.parseColor("#666666") }
+        progressPaint.color = parseColorSafe(config.seekbarColor, "#FF4444")
+        bufferPaint.color = parseColorSafe(config.seekbarBufferColor, "#666666")
         bgPaint.color = Color.parseColor("#33FFFFFF")
 
         visibility = if (config.seekbarEnabled) VISIBLE else GONE
@@ -45,15 +44,24 @@ class MiniSeekBar(context: Context, parent: ViewGroup) : View(context) {
         if (duration <= 0) return
         progress = (position / duration).toFloat().coerceIn(0f, 1f)
         bufferProgress = (bufferEnd / duration).toFloat().coerceIn(0f, 1f)
-        invalidate()
+        postInvalidate()
     }
 
     fun onSeekStart() {
+        hideRunnable?.let { removeCallbacks(it) }
         if (mode == "on-seek") visibility = VISIBLE
     }
 
     fun onSeekEnd() {
-        if (mode == "on-seek") postDelayed({ visibility = GONE }, 2000)
+        if (mode == "on-seek") {
+            hideRunnable?.let { removeCallbacks(it) }
+            hideRunnable = Runnable { visibility = GONE }
+            postDelayed(hideRunnable, 2000)
+        }
+    }
+
+    fun cleanup() {
+        hideRunnable?.let { removeCallbacks(it) }
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -62,5 +70,10 @@ class MiniSeekBar(context: Context, parent: ViewGroup) : View(context) {
         canvas.drawRect(0f, 0f, w, h, bgPaint)
         canvas.drawRect(0f, 0f, w * bufferProgress, h, bufferPaint)
         canvas.drawRect(0f, 0f, w * progress, h, progressPaint)
+    }
+
+    private fun parseColorSafe(color: String, fallback: String): Int {
+        return try { Color.parseColor(color) }
+        catch (_: Exception) { Color.parseColor(fallback) }
     }
 }

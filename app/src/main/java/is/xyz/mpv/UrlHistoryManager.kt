@@ -53,8 +53,8 @@ object UrlHistoryManager {
     }
 
     fun isM3u(url: String): Boolean {
-        val lower = url.lowercase()
-        return lower.endsWith(".m3u") || lower.endsWith(".m3u8") || lower.contains("m3u8")
+        val path = url.lowercase().substringBefore("?").substringBefore("#")
+        return path.endsWith(".m3u") || path.endsWith(".m3u8")
     }
 
     private fun load() {

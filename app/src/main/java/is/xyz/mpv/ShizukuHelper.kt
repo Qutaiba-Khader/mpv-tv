@@ -19,19 +19,25 @@ object ShizukuHelper {
         return try {
             val clazz = Class.forName("rikka.shizuku.Shizuku")
             val method = clazz.getMethod("pingBinder")
-            method.invoke(null) as Boolean
+            method.invoke(null) as? Boolean ?: false
         } catch (_: Exception) { false }
     }
 
     fun executeCommand(command: String): String? {
+        var process: Process? = null
         return try {
-            val process = Runtime.getRuntime().exec(arrayOf("sh", "-c", command))
+            process = Runtime.getRuntime().exec(arrayOf("sh", "-c", command))
             val output = process.inputStream.bufferedReader().readText().trim()
-            process.waitFor()
+            val exitCode = process.waitFor()
+            if (exitCode != 0) {
+                Log.w(TAG, "Command exit $exitCode: $command")
+            }
             output
         } catch (e: Exception) {
             Log.w(TAG, "Shell command failed: ${e.message}")
             null
+        } finally {
+            process?.destroy()
         }
     }
 
@@ -42,7 +48,6 @@ object ShizukuHelper {
             if (output.contains("ENCODING_E_AC3")) caps["eac3"] = "supported"
             if (output.contains("ENCODING_DTS")) caps["dts"] = "supported"
             if (output.contains("ENCODING_DOLBY_TRUEHD")) caps["truehd"] = "supported"
-            val arcMatch = Regex("ARC.*?supported", RegexOption.IGNORE_CASE).find(output)
             caps["arc_type"] = if (output.contains("eARC", ignoreCase = true)) "eARC" else "ARC"
         }
         return caps

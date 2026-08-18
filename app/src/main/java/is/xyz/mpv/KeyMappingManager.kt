@@ -52,10 +52,20 @@ object KeyMappingManager {
     }
 
     fun exportToInputConf(context: Context) {
+        if (bindings.isEmpty()) {
+            Log.w(TAG, "No bindings to export — call init() first")
+            return
+        }
         val dir = context.getExternalFilesDir(null) ?: context.filesDir
         val lines = bindings.map { "${it.keyName} ${it.command}" }
-        File(dir, "input.conf").writeText(lines.joinToString("\n") + "\n")
-        Log.i(TAG, "Exported ${bindings.size} key bindings to input.conf")
+        try {
+            val tmp = File(dir, "input.conf.tmp")
+            tmp.writeText(lines.joinToString("\n") + "\n")
+            tmp.renameTo(File(dir, "input.conf"))
+            Log.i(TAG, "Exported ${bindings.size} key bindings to input.conf")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to export key bindings: ${e.message}")
+        }
     }
 
     fun androidKeyCodeToMpvName(keyCode: Int): String {

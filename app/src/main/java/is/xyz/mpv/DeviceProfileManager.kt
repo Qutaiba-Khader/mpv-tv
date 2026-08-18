@@ -30,11 +30,12 @@ object DeviceProfileManager {
     private const val TAG = "mpv-tv"
 
     fun detect(context: Context): DeviceProfile {
-        val wm = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        val wm = context.getSystemService(Context.WINDOW_SERVICE) as? WindowManager
         val dm = DisplayMetrics()
         @Suppress("DEPRECATION")
-        wm.defaultDisplay.getRealMetrics(dm)
-        val refreshRate = wm.defaultDisplay.refreshRate
+        wm?.defaultDisplay?.getRealMetrics(dm)
+        @Suppress("DEPRECATION")
+        val refreshRate = wm?.defaultDisplay?.refreshRate ?: 60f
 
         val am = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
         val memInfo = ActivityManager.MemoryInfo()
@@ -75,10 +76,9 @@ object DeviceProfileManager {
 
     fun detectEnhanced(context: Context): Map<String, String> {
         val extra = mutableMapOf<String, String>()
-        try {
-            val process = Runtime.getRuntime().exec(arrayOf("getprop", "ro.board.platform"))
-            extra["platform"] = process.inputStream.bufferedReader().readText().trim()
-        } catch (_: Exception) {}
+        ShizukuHelper.executeCommand("getprop ro.board.platform")?.let {
+            extra["platform"] = it
+        }
         return extra
     }
 
@@ -98,8 +98,12 @@ object DeviceProfileManager {
 
     fun saveProfile(context: Context, profile: DeviceProfile) {
         val dir = context.getExternalFilesDir(null) ?: context.filesDir
-        File(dir, "device_profile.json").writeText(toJson(profile).toString(2))
-        Log.i(TAG, "Saved device profile for ${profile.model}")
+        try {
+            File(dir, "device_profile.json").writeText(toJson(profile).toString(2))
+            Log.i(TAG, "Saved device profile for ${profile.model}")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to save device profile: ${e.message}")
+        }
     }
 
     private fun getGpuName(): String {

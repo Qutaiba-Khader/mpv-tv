@@ -5,6 +5,7 @@ import android.util.Log
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.net.HttpURLConnection
 import java.net.URL
 
 data class Preset(
@@ -20,20 +21,27 @@ data class Preset(
 object PresetManager {
     private const val TAG = "mpv-tv"
     private const val INDEX_URL = "https://qutaiba-khader.github.io/mpv-tv/presets/index.json"
-    private val presets = mutableListOf<Preset>()
+    private val presets = Collections.synchronizedList(mutableListOf<Preset>())
 
     fun fetchPresets(callback: (List<Preset>) -> Unit) {
         Thread {
             try {
-                val json = URL(INDEX_URL).readText()
+                val conn = URL(INDEX_URL).openConnection() as HttpURLConnection
+                conn.connectTimeout = 10000
+                conn.readTimeout = 10000
+                val json = conn.inputStream.bufferedReader().use { it.readText() }
+                conn.disconnect()
                 val arr = JSONArray(json)
-                presets.clear()
+                val fetched = mutableListOf<Preset>()
                 for (i in 0 until arr.length()) {
-                    val o = arr.getJSONObject(i)
-                    presets.add(parsePreset(o))
+                    fetched.add(parsePreset(arr.getJSONObject(i)))
                 }
-                Log.i(TAG, "Fetched ${presets.size} presets")
-                callback(presets.toList())
+                synchronized(presets) {
+                    presets.clear()
+                    presets.addAll(fetched)
+                }
+                Log.i(TAG, "Fetched ${fetched.size} presets")
+                callback(fetched.toList())
             } catch (e: Exception) {
                 Log.w(TAG, "Failed to fetch presets: ${e.message}")
                 callback(emptyList())
@@ -43,7 +51,9 @@ object PresetManager {
 
     fun loadBundledPresets(context: Context): List<Preset> {
         try {
-            val json = context.assets.open("presets/index.json").bufferedReader().readText()
+            val json = context.assets.open("presets/index.json").use {
+                it.bufferedReader().readText()
+            }
             val arr = JSONArray(json)
             val bundled = mutableListOf<Preset>()
             for (i in 0 until arr.length()) bundled.add(parsePreset(arr.getJSONObject(i)))
@@ -56,15 +66,25 @@ object PresetManager {
 
     fun applyPreset(context: Context, preset: Preset) {
         val dir = context.getExternalFilesDir(null) ?: context.filesDir
-        File(dir, "mpv.conf").writeText(preset.mpvConf)
-        File(dir, "input.conf").writeText(preset.inputConf)
-        Log.i(TAG, "Applied preset: ${preset.name}")
+        try {
+            val confTmp = File(dir, "mpv.conf.tmp")
+            val inputTmp = File(dir, "input.conf.tmp")
+            confTmp.writeText(preset.mpvConf)
+            inputTmp.writeText(preset.inputConf)
+            confTmp.renameTo(File(dir, "mpv.conf"))
+            inputTmp.renameTo(File(dir, "input.conf"))
+            Log.i(TAG, "Applied preset: ${preset.name}")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to apply preset ${preset.name}: ${e.message}")
+        }
     }
 
     fun getCurrentPresetId(context: Context): String? {
         val dir = context.getExternalFilesDir(null) ?: context.filesDir
         val currentConf = File(dir, "mpv.conf").let { if (it.exists()) it.readText() else "" }
-        return presets.firstOrNull { it.mpvConf.trim() == currentConf.trim() }?.id
+        return synchronized(presets) {
+            presets.firstOrNull { it.mpvConf.trim() == currentConf.trim() }?.id
+        }
     }
 
     private fun parsePreset(o: JSONObject): Preset {
