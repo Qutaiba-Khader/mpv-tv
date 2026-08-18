@@ -1,39 +1,59 @@
-# mpv for Android
+# mpv-tv
 
-[![Build Status](https://github.com/mpv-android/mpv-android/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/mpv-android/mpv-android/actions/workflows/build.yml)
+Android TV-optimized fork of [mpv-android](https://github.com/mpv-android/mpv-android).
 
-mpv-android is a video player for Android based on [libmpv](https://github.com/mpv-player/mpv).
+General-purpose video player that stays in sync with upstream while adding TV-focused improvements.
 
-## Features
+## What's different from upstream
 
-* Hardware and software video decoding
-* Gesture-based seeking, volume/brightness control and more
-* libass support for styled subtitles
-* Secondary (or dual) subtitle support
-* High-quality rendering with advanced settings (scalers, debanding, interpolation, ...)
-* Play network streams with the "Open URL" function
-* Background playback, Picture-in-Picture, keyboard input supported
+- **External config directory** — config files at `/sdcard/Android/data/com.qutaiba.mpvtv/files/`, writable via ADB without root
+- **Built-in recording toggle** — stream recording with timestamped filenames and OSD feedback, no Lua needed
+- **Android TV defaults** — ships with optimized `mpv.conf` and `input.conf` for Android TV (correct `vo`, `hwdec`, buffering, D-pad bindings)
+- **TV remote keybindings** — D-pad, PLAY/PAUSE, FORWARD/REWIND, number keys mapped out of the box
 
-### Library?
+## Upstream sync
 
-mpv-android is **not** a library/module (AAR) you can import into your app.
+This fork tracks `mpv-android/mpv-android` master. All our changes live on the `dev` branch.
 
-If you'd like to use libmpv in your app you can use our code as inspiration.
-The important parts are [`MPVLib`](app/src/main/java/is/xyz/mpv/MPVLib.kt), [`BaseMPVView`](app/src/main/java/is/xyz/mpv/BaseMPVView.kt) and the [native code](app/src/main/jni/).
-Native code is built by [these scripts](buildscripts/).
+### How to merge upstream updates
 
-## Downloads
+```bash
+git fetch upstream
+git checkout master
+git merge upstream/master
+git checkout dev
+git merge master
+# resolve any conflicts in our changed files
+git push origin dev master
+```
 
-You can download mpv-android from the [Releases section](https://github.com/mpv-android/mpv-android/releases) or
+Our changes are isolated to a small set of files (see below), so merge conflicts should be rare.
 
-[<img src="https://play.google.com/intl/en_us/badges/images/generic/en-play-badge.png" alt="Get it on Google Play" height="80">](https://play.google.com/store/apps/details?id=is.xyz.mpv)
+### Files we modify (keep minimal for clean merges)
 
-[<img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" alt="Get it on F-Droid" height="80">](https://f-droid.org/packages/is.xyz.mpv)
+- `app/src/main/java/is/xyz/mpv/MPVActivity.kt` — config dir change (one line)
+- `app/build.gradle` — package name, version
+- `app/src/main/assets/mpv.conf` — default TV config (NEW file, no conflict)
+- `app/src/main/assets/input.conf` — default TV keybindings (NEW file, no conflict)
+- `app/src/main/java/com/qutaiba/mpvtv/RecordManager.kt` — recording toggle (NEW file)
+- `README.md` — this file
 
-**Note**: Android TV is supported, but only available on F-Droid or by installing the APK manually.
+## Config files
 
-## Building from source
+Place config files at:
+```
+/sdcard/Android/data/com.qutaiba.mpvtv/files/mpv.conf
+/sdcard/Android/data/com.qutaiba.mpvtv/files/input.conf
+/sdcard/Android/data/com.qutaiba.mpvtv/files/scripts/  (Lua scripts)
+```
 
-Take a look at the [README](buildscripts/README.md) inside the `buildscripts` directory.
+Push via ADB:
+```bash
+adb push mpv.conf /sdcard/Android/data/com.qutaiba.mpvtv/files/mpv.conf
+```
 
-Some other documentation can be found at this [link](http://mpv-android.github.io/mpv-android/).
+## Building
+
+See [buildscripts/README.md](buildscripts/README.md) for native library build instructions.
+
+Based on [mpv-android](https://github.com/mpv-android/mpv-android) by the mpv team.
