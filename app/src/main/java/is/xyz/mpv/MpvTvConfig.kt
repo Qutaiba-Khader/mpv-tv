@@ -14,10 +14,12 @@ object MpvTvConfig {
         try {
             file.readLines().forEach { line ->
                 val trimmed = line.trim()
+                if (trimmed.startsWith("#") || trimmed.isEmpty()) return@forEach
                 if (trimmed.startsWith("mpvtv-")) {
                     val parts = trimmed.split("=", limit = 2)
                     if (parts.size == 2) {
-                        options[parts[0].trim()] = parts[1].trim()
+                        val value = parts[1].trim().replace(Regex("\\s+#.*$"), "")
+                        options[parts[0].trim()] = value
                     }
                 }
             }

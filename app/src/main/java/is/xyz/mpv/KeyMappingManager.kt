@@ -20,16 +20,20 @@ object KeyMappingManager {
     private val defaultBindings = listOf(
         KeyBinding("RIGHT", KeyEvent.KEYCODE_DPAD_RIGHT, "seek 10", "Seek forward 10s"),
         KeyBinding("LEFT", KeyEvent.KEYCODE_DPAD_LEFT, "seek -10", "Seek back 10s"),
+        KeyBinding("FORWARD", KeyEvent.KEYCODE_MEDIA_FAST_FORWARD, "no-osd seek 30", "Seek forward 30s"),
+        KeyBinding("REWIND", KeyEvent.KEYCODE_MEDIA_REWIND, "no-osd seek -30", "Seek back 30s"),
         KeyBinding("PLAYPAUSE", KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE, "cycle pause", "Toggle play/pause"),
         KeyBinding("PLAY", KeyEvent.KEYCODE_MEDIA_PLAY, "set pause no", "Play"),
         KeyBinding("PAUSE", KeyEvent.KEYCODE_MEDIA_PAUSE, "set pause yes", "Pause"),
-        KeyBinding("RECORD", KeyEvent.KEYCODE_MEDIA_RECORD, "toggle-recording", "Toggle recording"),
         KeyBinding("1", KeyEvent.KEYCODE_1, "add audio-delay +0.1", "Audio delay +0.1s"),
         KeyBinding("4", KeyEvent.KEYCODE_4, "add audio-delay -0.1", "Audio delay -0.1s"),
-        KeyBinding("7", KeyEvent.KEYCODE_7, "set audio-delay 0", "Reset audio delay"),
+        KeyBinding("7", KeyEvent.KEYCODE_7, "set audio-delay 0; show-text \"Audio delay: 0ms\" 2000", "Reset audio delay"),
         KeyBinding("3", KeyEvent.KEYCODE_3, "cycle-values video-aspect-override 16:9 4:3 2.35:1 no", "Cycle aspect"),
-        KeyBinding("0", KeyEvent.KEYCODE_0, "reset-zoom-pan", "Reset zoom/pan"),
-        KeyBinding("6", KeyEvent.KEYCODE_6, "screenshot", "Take screenshot"),
+        KeyBinding("2", KeyEvent.KEYCODE_2, "add panscan 0.01", "Panscan in"),
+        KeyBinding("5", KeyEvent.KEYCODE_5, "add panscan -0.01", "Panscan out"),
+        KeyBinding("8", KeyEvent.KEYCODE_8, "set panscan 0.42; show-text \"Panscan: 0.42\" 1500", "Panscan preset"),
+        KeyBinding("0", KeyEvent.KEYCODE_0, "set video-zoom 0; no-osd set panscan 0; no-osd set video-pan-x 0; no-osd set video-pan-y 0; no-osd set video-align-x 0; no-osd set video-align-y 0; show-text \"Zoom/Pan reset\" 1500", "Reset zoom/pan"),
+        KeyBinding("6", KeyEvent.KEYCODE_6, "screenshot; show-text \"Screenshot saved\" 2000", "Take screenshot"),
     )
 
     fun init() {

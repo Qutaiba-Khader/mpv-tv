@@ -68,13 +68,18 @@ object PresetManager {
     fun applyPreset(context: Context, preset: Preset) {
         val dir = context.getExternalFilesDir(null) ?: context.filesDir
         try {
+            val conf = File(dir, "mpv.conf")
+            val input = File(dir, "input.conf")
+            if (conf.exists()) conf.copyTo(File(dir, "mpv.conf.bak"), overwrite = true)
+            if (input.exists()) input.copyTo(File(dir, "input.conf.bak"), overwrite = true)
             val confTmp = File(dir, "mpv.conf.tmp")
             val inputTmp = File(dir, "input.conf.tmp")
             confTmp.writeText(preset.mpvConf)
             inputTmp.writeText(preset.inputConf)
-            confTmp.renameTo(File(dir, "mpv.conf"))
-            inputTmp.renameTo(File(dir, "input.conf"))
-            Log.i(TAG, "Applied preset: ${preset.name}")
+            confTmp.renameTo(conf)
+            inputTmp.renameTo(input)
+            MpvTvConfig.load(dir.path)
+            Log.i(TAG, "Applied preset: ${preset.name} (backup saved as .bak)")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to apply preset ${preset.name}: ${e.message}")
         }
