@@ -86,6 +86,10 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, TouchGesturesObse
     private lateinit var binding: PlayerBinding
     private lateinit var gestures: TouchGestures
     private var recordManager: RecordManager? = null // mpv-tv: recording toggle
+    private var currentFilepath: String? = null // mpv-tv: for watch history
+    private var miniSeekBar: MiniSeekBar? = null // mpv-tv: thin progress line
+    private var quickPanel: QuickSettingsPanel? = null // mpv-tv: quick settings overlay
+    private var longPressHandler: LongPressHandler? = null // mpv-tv: D-pad long-press
 
     // convenience alias
     private val player get() = binding.player
@@ -292,6 +296,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, TouchGesturesObse
 
         // Parse the intent
         val filepath = parsePathFromIntent(intent)
+        currentFilepath = filepath // mpv-tv: save for watch history
         if (intent.action == Intent.ACTION_VIEW) {
             parseIntentExtras(intent.extras)
         }
@@ -308,8 +313,16 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, TouchGesturesObse
         val configDir = getExternalFilesDir(null)?.path ?: filesDir.path
         TvDefaults.ensureDefaults(this, configDir)
         MpvTvConfig.load(configDir) // mpv-tv: load custom options
-        val recOverlay = RecordingOverlay(this, binding.root as ViewGroup) // mpv-tv
+        WatchHistoryManager.init(this) // mpv-tv: watch history
+        val rootView = binding.root as ViewGroup
+        val recOverlay = RecordingOverlay(this, rootView) // mpv-tv
         recordManager = RecordManager(recOverlay) // mpv-tv: recording toggle
+        miniSeekBar = MiniSeekBar(this, rootView) // mpv-tv: thin seek bar
+        quickPanel = QuickSettingsPanel(this, rootView) // mpv-tv: quick settings
+        longPressHandler = LongPressHandler(
+            onLongPressSeek = { sec -> MPVLib.command(arrayOf("seek", sec.toString(), "relative")) },
+            onQuickPanel = { quickPanel?.toggle() }
+        ) // mpv-tv: D-pad long-press
         player.initialize(configDir, cacheDir.path)
         player.playFile(filepath)
 
@@ -379,6 +392,12 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, TouchGesturesObse
         stopServiceRunnable.run()
 
         recordManager?.destroy() // mpv-tv: stop recording on exit
+        longPressHandler?.destroy() // mpv-tv
+        // mpv-tv: save watch history on exit
+        val title = MPVLib.getPropertyString("media-title") ?: ""
+        val pos = (MPVLib.getPropertyDouble("time-pos") ?: 0.0).toLong()
+        val dur = (MPVLib.getPropertyDouble("duration") ?: 0.0).toLong()
+        if (dur > 0) WatchHistoryManager.addEntry(currentFilepath ?: "", title, pos, dur)
         player.removeObserver(this)
         player.destroy()
         super.onDestroy()
@@ -809,6 +828,12 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, TouchGesturesObse
             showUnlockControls()
             return super.dispatchKeyEvent(ev)
         }
+
+        // mpv-tv: quick panel intercepts keys when visible
+        if (quickPanel?.handleKey(ev) == true) return true
+        // mpv-tv: long-press detection for D-pad
+        if (ev.action == KeyEvent.ACTION_DOWN) longPressHandler?.onKeyDown(ev)
+        if (ev.action == KeyEvent.ACTION_UP && longPressHandler?.onKeyUp(ev) == true) return true
 
         // try built-in event handler first, forward all other events to libmpv
         val handled = interceptDpad(ev) ||
