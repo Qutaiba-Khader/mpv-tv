@@ -32,7 +32,37 @@
         app:summary="@string/pref_header_advanced_summary"
         app:title="@string/pref_header_advanced" />
 
-    <!-- mpv-tv: bridge APK installer -->
+    <!-- mpv-tv settings -->
+    <Preference
+        app:key="mpvtv_presets"
+        app:icon="@drawable/round_settings_24"
+        app:summary="Choose optimized config presets"
+        app:title="Presets" />
+    <Preference
+        app:key="mpvtv_keymapping"
+        app:icon="@drawable/round_settings_24"
+        app:summary="Remap remote buttons"
+        app:title="Key Mapping" />
+    <Preference
+        app:key="mpvtv_device"
+        app:icon="@drawable/round_info_24"
+        app:summary="Hardware info and recommendations"
+        app:title="Device Profile" />
+    <Preference
+        app:key="mpvtv_url"
+        app:icon="@drawable/round_play_arrow_24"
+        app:summary="Open URL with history"
+        app:title="Open URL" />
+    <Preference
+        app:key="mpvtv_history"
+        app:icon="@drawable/round_play_arrow_24"
+        app:summary="Resume previous sessions"
+        app:title="Watch History" />
+    <Preference
+        app:key="mpvtv_screenshots"
+        app:icon="@drawable/round_palette_24"
+        app:summary="Browse captured screenshots"
+        app:title="Screenshots" />
     <Preference
         app:key="bridge_apk"
         app:icon="@drawable/round_settings_24"

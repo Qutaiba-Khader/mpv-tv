@@ -4,6 +4,12 @@ import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.os.Build
 import `is`.xyz.mpv.BridgeInstaller
+import `is`.xyz.mpv.PresetPickerFragment
+import `is`.xyz.mpv.KeyMappingFragment
+import `is`.xyz.mpv.DeviceProfileFragment
+import `is`.xyz.mpv.UrlInputFragment
+import `is`.xyz.mpv.WatchHistoryFragment
+import `is`.xyz.mpv.ScreenshotGalleryFragment
 import android.os.Bundle
 import android.view.MenuItem
 import android.widget.FrameLayout
@@ -117,6 +123,22 @@ class PreferenceActivity : AppCompatActivity(),
                 BridgeInstaller.showBridgeDialog(requireActivity())
                 true
             }
+            // mpv-tv: fragment-based settings
+            fun openFragment(key: String, fragment: androidx.fragment.app.Fragment) {
+                findPreference<Preference>(key)?.setOnPreferenceClickListener {
+                    parentFragmentManager.beginTransaction()
+                        .replace(R.id.main, fragment)
+                        .addToBackStack(null)
+                        .commit()
+                    true
+                }
+            }
+            openFragment("mpvtv_presets", PresetPickerFragment())
+            openFragment("mpvtv_keymapping", KeyMappingFragment())
+            openFragment("mpvtv_device", DeviceProfileFragment())
+            openFragment("mpvtv_url", UrlInputFragment())
+            openFragment("mpvtv_history", WatchHistoryFragment())
+            openFragment("mpvtv_screenshots", ScreenshotGalleryFragment())
         }
         override fun onResume() {
             super.onResume()
