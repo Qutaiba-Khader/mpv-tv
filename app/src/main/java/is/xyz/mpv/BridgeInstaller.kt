@@ -43,6 +43,7 @@ object BridgeInstaller {
     }
 
     fun showBridgeDialog(activity: Activity, isFirstRun: Boolean = false) {
+        if (activity.isFinishing || activity.isDestroyed) return
         val installed = isBridgeInstalled(activity)
         val isStock = isStockMpvInstalled(activity)
 

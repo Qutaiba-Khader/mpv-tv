@@ -111,16 +111,22 @@ class PreferenceActivity : AppCompatActivity(),
     class SettingsFragment : PreferenceFragmentCompat() {
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
             setPreferencesFromResource(R.xml.preferences_root, rootKey)
+            updateBridgeStatus()
             // mpv-tv: bridge APK settings entry
-            findPreference<Preference>("bridge_apk")?.apply {
-                val installed = BridgeInstaller.isBridgeInstalled(requireContext())
-                summary = if (installed) "Installed — intents forwarded to mpv-tv"
-                    else "Not installed — tap to set up"
-                setOnPreferenceClickListener {
-                    BridgeInstaller.showBridgeDialog(requireActivity())
-                    true
-                }
+            findPreference<Preference>("bridge_apk")?.setOnPreferenceClickListener {
+                BridgeInstaller.showBridgeDialog(requireActivity())
+                true
             }
+        }
+        override fun onResume() {
+            super.onResume()
+            updateBridgeStatus()
+        }
+        private fun updateBridgeStatus() {
+            findPreference<Preference>("bridge_apk")?.summary =
+                if (BridgeInstaller.isBridgeInstalled(requireContext()))
+                    "Installed — intents forwarded to mpv-tv"
+                else "Not installed — tap to set up"
         }
     }
 
