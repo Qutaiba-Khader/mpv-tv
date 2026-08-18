@@ -18,6 +18,7 @@ class QuickSettingsPanel(private val context: Context, private val parent: ViewG
     private val container: LinearLayout
     var isVisible = false
         private set
+    var onRecordToggle: (() -> Unit)? = null // mpv-tv: callback for recording toggle
 
     init {
         panel = FrameLayout(context).apply {
@@ -59,6 +60,11 @@ class QuickSettingsPanel(private val context: Context, private val parent: ViewG
         }
         addRow("Deinterlace", arrayOf("ON", "OFF")) { v ->
             MPVLib.setPropertyBoolean("deinterlace", v == "ON")
+        }
+
+        // mpv-tv: recording toggle accessible from QuickPanel (GTV remote has no RECORD button)
+        addRow("Record", arrayOf("Start", "Stop")) { v ->
+            onRecordToggle?.invoke()
         }
 
         panel.addView(container)

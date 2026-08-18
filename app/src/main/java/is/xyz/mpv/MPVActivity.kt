@@ -259,25 +259,31 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, TouchGesturesObse
     override fun onCreate(icicle: Bundle?) {
         super.onCreate(icicle)
 
-        // mpv-tv: verify external storage + permissions at startup
+        // mpv-tv: verify external storage at startup with visible feedback
         val extDir = getExternalFilesDir(null)
+        val configTarget: java.io.File
         if (extDir == null || !extDir.canWrite()) {
             Log.w(TAG, "mpv-tv: external files dir not writable, falling back to internal")
             android.widget.Toast.makeText(this,
-                "Warning: external storage unavailable. Config files won't be ADB-editable.",
+                "mpv-tv: external storage unavailable — using internal config",
                 android.widget.Toast.LENGTH_LONG).show()
-        }
-        val configTarget = extDir ?: filesDir
-        // verify we can actually write
-        try {
-            val testFile = java.io.File(configTarget, ".mpvtv-write-test")
-            testFile.writeText("ok")
-            testFile.delete()
-        } catch (e: Exception) {
-            Log.e(TAG, "mpv-tv: config dir not writable: ${configTarget.absolutePath}", e)
-            android.widget.Toast.makeText(this,
-                "Error: cannot write to config directory. Check storage permissions.",
-                android.widget.Toast.LENGTH_LONG).show()
+            configTarget = filesDir
+        } else {
+            try {
+                val testFile = java.io.File(extDir, ".mpvtv-write-test")
+                testFile.writeText("ok")
+                testFile.delete()
+                configTarget = extDir
+                android.widget.Toast.makeText(this,
+                    "mpv-tv ready — config: ${extDir.absolutePath}",
+                    android.widget.Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                Log.e(TAG, "mpv-tv: config dir not writable", e)
+                android.widget.Toast.makeText(this,
+                    "mpv-tv: config dir not writable — using internal",
+                    android.widget.Toast.LENGTH_LONG).show()
+                configTarget = filesDir
+            }
         }
         Utils.copyAssets(this, configTarget)
         BackgroundPlaybackService.createNotificationChannel(this)
@@ -340,15 +346,17 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, TouchGesturesObse
         // mpv-tv: apply mini seekbar style if configured
         miniSeekBarEnabled = MpvTvConfig.getString("mpvtv-seekbar", "normal") == "mini"
         if (miniSeekBarEnabled) applyMiniSeekbarStyle()
-        quickPanel = QuickSettingsPanel(this, rootView) // mpv-tv: quick settings
+        quickPanel = QuickSettingsPanel(this, rootView).apply { // mpv-tv: quick settings
+            onRecordToggle = { toggleRecording() }
+        }
         longPressHandler = LongPressHandler(
             onLongPressSeek = { sec -> MPVLib.command(arrayOf("seek", sec.toString(), "relative")) },
             onQuickPanel = { quickPanel?.toggle() }
         ) // mpv-tv: D-pad long-press
-        // mpv-tv: Shizuku status check (informational)
+        // mpv-tv: Shizuku status check (visible)
         if (ShizukuHelper.isShizukuInstalled(this)) {
             if (ShizukuHelper.isShizukuAvailable()) {
-                Log.i(TAG, "mpv-tv: Shizuku available — enhanced detection enabled")
+                Log.i(TAG, "mpv-tv: Shizuku available")
             } else {
                 Log.i(TAG, "mpv-tv: Shizuku installed but not running")
             }

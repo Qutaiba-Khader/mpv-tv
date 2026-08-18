@@ -38,7 +38,8 @@ object BridgeInstaller {
     fun shouldShowFirstRunPrompt(context: Context): Boolean {
         val prefs = context.getSharedPreferences("mpvtv", Context.MODE_PRIVATE)
         if (prefs.getBoolean(PREF_KEY, false)) return false
-        return !isBridgeInstalled(context)
+        // show if: bridge not installed (no is.xyz.mpv at all), OR stock mpv installed (not our bridge)
+        return !isBridgeInstalled(context) || isStockMpvInstalled(context)
     }
 
     fun markPromptShown(context: Context) {
