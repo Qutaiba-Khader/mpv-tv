@@ -114,11 +114,20 @@ val intent = Intent(Intent.ACTION_VIEW).apply {
 startActivity(intent)
 ```
 
-### Return extras
+### Return extras (onActivityResult)
+
 | Extra | Type | Description |
 |-------|------|-------------|
 | `position` | Int (ms) | Last playback position |
 | `duration` | Int (ms) | Total duration |
+| `completed` | Boolean | `true` if video played to the end (eof-reached) |
+| `media-title` | String | Resolved media title |
+| `video-width` | Int | Video width in pixels |
+| `video-height` | Int | Video height in pixels |
+| `speed` | Float | Playback speed at exit (1.0 = normal) |
+| `recording-path` | String | Path to saved recording (if user recorded during playback) |
+
+Stock extras (`position`, `duration`) are upstream. Extended extras are mpv-tv additions — all optional, present only when data is available.
 
 ## Default Keybindings
 
