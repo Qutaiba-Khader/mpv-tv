@@ -1215,6 +1215,60 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, TouchGesturesObse
                 pushOption("force-media-title", it)
         }
         // TODO: `headers` would be good, maybe `tls_verify`
+
+        // mpv-tv: extended intent extras for external app control
+        // Any app can pass these to customize playback per-launch.
+        // All use file-local-options so they only affect this file.
+
+        // Profile (e.g., "low-latency" for live streams)
+        extras.getString("profile")?.let {
+            onloadCommands.add(arrayOf("apply-profile", it))
+            Log.v(TAG, "mpv-tv: applying profile from intent: $it")
+        }
+
+        // Video options
+        extras.getString("aspect")?.let { pushOption("video-aspect-override", it) }
+        extras.getString("panscan")?.let { pushOption("panscan", it) }
+        extras.getString("hwdec")?.let { pushOption("hwdec", it) }
+        extras.getString("vo")?.let { pushOption("vo", it) }
+
+        // Audio options
+        extras.getString("audio-delay")?.let { pushOption("audio-delay", it) }
+        extras.getString("volume")?.let { pushOption("volume", it) }
+        extras.getString("audio-spdif")?.let { pushOption("audio-spdif", it) }
+
+        // Playback control
+        if (extras.getBoolean("no-resume", false))
+            pushOption("resume-playback", "no")
+        if (extras.getBoolean("pause", false))
+            pushOption("pause", "yes")
+        if (extras.getBoolean("no-pause", false))
+            pushOption("pause", "no")
+        if (extras.getBoolean("loop", false))
+            pushOption("loop-file", "inf")
+
+        // Buffering / demuxer (for live vs VOD)
+        extras.getString("demuxer-max-bytes")?.let { pushOption("demuxer-max-bytes", it) }
+        extras.getString("demuxer-readahead-secs")?.let { pushOption("demuxer-readahead-secs", it) }
+        extras.getString("cache")?.let { pushOption("cache", it) }
+
+        // OSD message at playback start
+        extras.getString("osd-message")?.let { msg ->
+            val dur = extras.getInt("osd-duration", 3000)
+            onloadCommands.add(arrayOf("show-text", msg, dur.toString()))
+        }
+
+        // Arbitrary mpv options (pipe-separated key=value pairs)
+        // e.g., "deband=yes|deinterlace=yes|speed=1.5"
+        extras.getString("mpv-options")?.let { opts ->
+            opts.split("|").forEach { pair ->
+                val parts = pair.split("=", limit = 2)
+                if (parts.size == 2) {
+                    pushOption(parts[0].trim(), parts[1].trim())
+                    Log.v(TAG, "mpv-tv: option from intent: ${parts[0]}=${parts[1]}")
+                }
+            }
+        }
     }
 
     // UI (Part 2)

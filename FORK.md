@@ -15,7 +15,7 @@ Every modification to an upstream file MUST be registered in the table below. If
 | File | What changed | Why it can't be a new file | Merge risk |
 |------|-------------|---------------------------|------------|
 | `app/build.gradle` | applicationId → `com.qutaiba.mpvtv`, versionName | Gradle requires it here | LOW — end of file, rarely conflicts |
-| `app/src/main/java/is/xyz/mpv/MPVActivity.kt` | config dir, RecordManager/UI init, key handling, cleanup | Init + key dispatch live here | LOW — 10 marked lines |
+| `app/src/main/java/is/xyz/mpv/MPVActivity.kt` | config dir, RecordManager/UI init, key handling, cleanup, extended intent extras | Init + key dispatch + intent parsing live here | LOW — marked lines, additive |
 | `app/src/main/java/is/xyz/mpv/Utils.kt` | `copyAssets` accepts target dir param | Assets must go to external dir | LOW — signature change only |
 | `app/src/main/res/values/strings.xml` | app_name → "mpv-tv" | Branding | LOW — one line |
 | `settings.gradle` | Added `bridge` module include | Gradle requires it | LOW — one line |
