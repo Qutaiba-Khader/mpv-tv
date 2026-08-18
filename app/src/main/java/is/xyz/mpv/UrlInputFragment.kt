@@ -90,16 +90,21 @@ class UrlInputFragment : Fragment() {
     }
 
     private fun playUrl(url: String) {
+        val ctx = context ?: return
         if (url.isBlank()) {
-            Toast.makeText(requireContext(), "Enter a URL", Toast.LENGTH_SHORT).show()
+            Toast.makeText(ctx, "Enter a URL", Toast.LENGTH_SHORT).show()
             return
         }
         UrlHistoryManager.addUrl(url)
-        val intent = Intent(Intent.ACTION_VIEW).apply {
-            setDataAndType(Uri.parse(url), "video/*")
-            setPackage(requireContext().packageName)
+        try {
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(Uri.parse(url), "video/*")
+                setPackage(ctx.packageName)
+            }
+            startActivity(intent)
+        } catch (e: Exception) {
+            Toast.makeText(ctx, "Cannot play: ${e.message}", Toast.LENGTH_SHORT).show()
         }
-        startActivity(intent)
     }
 
     private fun updateHistory() {

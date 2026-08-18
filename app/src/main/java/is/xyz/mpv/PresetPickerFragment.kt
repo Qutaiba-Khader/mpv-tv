@@ -15,8 +15,9 @@ class PresetPickerFragment : Fragment() {
     private val presets = mutableListOf<Preset>()
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        recyclerView = RecyclerView(requireContext()).apply {
-            layoutManager = LinearLayoutManager(requireContext())
+        val ctx = requireContext()
+        recyclerView = RecyclerView(ctx).apply {
+            layoutManager = LinearLayoutManager(ctx)
             setPadding(32, 16, 32, 16)
         }
         loadPresets()
@@ -24,7 +25,8 @@ class PresetPickerFragment : Fragment() {
     }
 
     private fun loadPresets() {
-        val bundled = PresetManager.loadBundledPresets(requireContext())
+        val ctx = context ?: return
+        val bundled = PresetManager.loadBundledPresets(ctx)
         if (bundled.isNotEmpty()) {
             presets.clear()
             presets.addAll(bundled)
@@ -32,7 +34,7 @@ class PresetPickerFragment : Fragment() {
         }
         PresetManager.fetchPresets { fetched ->
             activity?.runOnUiThread {
-                if (fetched.isNotEmpty()) {
+                if (fetched.isNotEmpty() && isAdded) {
                     presets.clear()
                     presets.addAll(fetched)
                     updateAdapter()
@@ -42,10 +44,12 @@ class PresetPickerFragment : Fragment() {
     }
 
     private fun updateAdapter() {
-        val currentId = PresetManager.getCurrentPresetId(requireContext())
+        val ctx = context ?: return
+        val currentId = PresetManager.getCurrentPresetId(ctx)
         recyclerView?.adapter = PresetAdapter(presets, currentId) { preset ->
-            PresetManager.applyPreset(requireContext(), preset)
-            Toast.makeText(requireContext(), "Applied: ${preset.name}", Toast.LENGTH_SHORT).show()
+            val c = context ?: return@PresetAdapter
+            PresetManager.applyPreset(c, preset)
+            Toast.makeText(c, "Applied: ${preset.name}", Toast.LENGTH_SHORT).show()
             updateAdapter()
         }
     }

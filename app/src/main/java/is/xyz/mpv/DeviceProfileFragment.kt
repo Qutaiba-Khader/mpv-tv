@@ -73,16 +73,19 @@ class DeviceProfileFragment : Fragment() {
                 text = "Enhanced Detection (Shizuku)"
                 isFocusable = true
                 setOnClickListener {
-                    val audio = ShizukuHelper.getAudioCapabilities()
-                    val display = ShizukuHelper.getDisplayInfo()
-                    val decoders = ShizukuHelper.getAvailableDecoders()
-                    val msg = buildString {
-                        append("Audio: ${audio.entries.joinToString(", ") { "${it.key}=${it.value}" }}\n")
-                        append("Display: ${display.entries.joinToString(", ") { "${it.key}=${it.value}" }}\n")
-                        append("Decoders: ${decoders.take(10).joinToString(", ")}")
-                        if (decoders.size > 10) append(" (+${decoders.size - 10} more)")
-                    }
-                    Toast.makeText(ctx, msg, Toast.LENGTH_LONG).show()
+                    val c = context ?: return@setOnClickListener
+                    Thread {
+                        val audio = ShizukuHelper.getAudioCapabilities()
+                        val display = ShizukuHelper.getDisplayInfo()
+                        val decoders = ShizukuHelper.getAvailableDecoders()
+                        val msg = buildString {
+                            append("Audio: ${audio.entries.joinToString(", ") { "${it.key}=${it.value}" }}\n")
+                            append("Display: ${display.entries.joinToString(", ") { "${it.key}=${it.value}" }}\n")
+                            append("Decoders: ${decoders.take(10).joinToString(", ")}")
+                            if (decoders.size > 10) append(" (+${decoders.size - 10} more)")
+                        }
+                        activity?.runOnUiThread { Toast.makeText(c, msg, Toast.LENGTH_LONG).show() }
+                    }.start()
                 }
             })
         }

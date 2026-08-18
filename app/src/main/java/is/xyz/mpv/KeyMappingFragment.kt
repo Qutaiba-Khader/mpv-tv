@@ -46,8 +46,9 @@ class KeyMappingFragment : Fragment() {
         btnRow.addView(Button(requireContext()).apply {
             text = "Export to input.conf"
             setOnClickListener {
-                KeyMappingManager.exportToInputConf(requireContext())
-                Toast.makeText(requireContext(), "Exported to input.conf", Toast.LENGTH_SHORT).show()
+                val c = context ?: return@setOnClickListener
+                KeyMappingManager.exportToInputConf(c)
+                Toast.makeText(c, "Exported to input.conf", Toast.LENGTH_SHORT).show()
             }
         })
 
@@ -63,8 +64,11 @@ class KeyMappingFragment : Fragment() {
     }
 
     private fun showKeyCaptureDialog(index: Int) {
-        val binding = KeyMappingManager.getBindings()[index]
-        val dialog = AlertDialog.Builder(requireContext())
+        val bindings = KeyMappingManager.getBindings()
+        if (index !in bindings.indices) return
+        val binding = bindings[index]
+        val ctx = context ?: return
+        val dialog = AlertDialog.Builder(ctx)
             .setTitle("Press a button for: ${binding.description}")
             .setMessage("Current: ${binding.keyName}\n\nPress any button on your remote...")
             .setNegativeButton("Cancel", null)

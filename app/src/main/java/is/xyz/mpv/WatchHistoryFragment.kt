@@ -56,13 +56,18 @@ class WatchHistoryFragment : Fragment() {
         recyclerView?.adapter = HistoryAdapter(
             WatchHistoryManager.getEntries(),
             onPlay = { entry ->
-                val intent = Intent(Intent.ACTION_VIEW).apply {
-                    setDataAndType(Uri.parse(entry.url), "video/*")
-                    setPackage(requireContext().packageName)
-                    putExtra("position", (entry.position * 1000).toInt())
-                    putExtra("title", entry.title)
+                val ctx = context ?: return@HistoryAdapter
+                try {
+                    val intent = Intent(Intent.ACTION_VIEW).apply {
+                        setDataAndType(Uri.parse(entry.url), "video/*")
+                        setPackage(ctx.packageName)
+                        putExtra("position", minOf(entry.position * 1000, Int.MAX_VALUE.toLong()).toInt())
+                        putExtra("title", entry.title)
+                    }
+                    startActivity(intent)
+                } catch (e: Exception) {
+                    Toast.makeText(ctx, "Cannot play: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
-                startActivity(intent)
             },
             onRemove = { entry ->
                 WatchHistoryManager.removeEntry(entry.url)

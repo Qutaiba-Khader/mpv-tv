@@ -40,15 +40,17 @@ class ScreenshotGalleryFragment : Fragment() {
     }
 
     private fun updateList() {
-        val shots = ScreenshotGallery.getScreenshots(requireContext())
+        val ctx = context ?: return
+        val shots = ScreenshotGallery.getScreenshots(ctx)
         if (shots.isEmpty()) {
             recyclerView?.adapter = null
             return
         }
         recyclerView?.adapter = GalleryAdapter(shots) { entry ->
+            val c = context ?: return@GalleryAdapter
             val deleted = ScreenshotGallery.deleteScreenshot(entry)
             if (deleted) {
-                Toast.makeText(requireContext(), "Deleted: ${entry.name}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(c, "Deleted: ${entry.name}", Toast.LENGTH_SHORT).show()
                 updateList()
             }
         }
