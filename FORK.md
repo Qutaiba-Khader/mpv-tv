@@ -14,10 +14,11 @@ Every modification to an upstream file MUST be registered in the table below. If
 
 | File | What changed | Why it can't be a new file | Merge risk |
 |------|-------------|---------------------------|------------|
-| `app/build.gradle` | applicationId, versionName | Gradle requires it here | LOW — end of file, rarely conflicts |
-| `app/src/main/java/is/xyz/mpv/MPVActivity.kt` | config dir: `filesDir` → `getExternalFilesDir` | Init call is in this file | LOW — one line change |
-| `app/src/main/AndroidManifest.xml` | package name, any new permissions | Android requires it here | LOW — additive changes |
-| `app/src/main/res/values/strings.xml` | app_name | Branding | LOW — one line |
+| `app/build.gradle` | applicationId → `com.qutaiba.mpvtv`, versionName | Gradle requires it here | LOW — end of file, rarely conflicts |
+| `app/src/main/java/is/xyz/mpv/MPVActivity.kt` | config dir, RecordManager/UI init, key handling, cleanup | Init + key dispatch live here | LOW — 10 marked lines |
+| `app/src/main/java/is/xyz/mpv/Utils.kt` | `copyAssets` accepts target dir param | Assets must go to external dir | LOW — signature change only |
+| `app/src/main/res/values/strings.xml` | app_name → "mpv-tv" | Branding | LOW — one line |
+| `settings.gradle` | Added `bridge` module include | Gradle requires it | LOW — one line |
 
 ### New Files (zero merge risk)
 
@@ -27,10 +28,24 @@ Every modification to an upstream file MUST be registered in the table below. If
 | `scripts/sync-upstream.sh` | Upstream merge automation |
 | `app/src/main/assets/mpv.conf` | Default TV config (shipped in APK) |
 | `app/src/main/assets/input.conf` | Default TV keybindings (shipped in APK) |
+| `app/src/main/java/is/xyz/mpv/TvDefaults.kt` | Copies default configs on first run |
+| `app/src/main/java/is/xyz/mpv/MpvTvConfig.kt` | Parser for `mpvtv-*` custom options |
 | `app/src/main/java/is/xyz/mpv/RecordManager.kt` | Recording toggle with timestamped filenames |
-| `app/src/main/java/is/xyz/mpv/TvDefaults.kt` | TV preset loader (applies defaults if no user config) |
-| `.github/workflows/build-release.yml` | Our CI/CD pipeline |
-| `.github/workflows/sync-upstream.yml` | Automated upstream sync check |
+| `app/src/main/java/is/xyz/mpv/RecordingOverlay.kt` | Persistent REC indicator overlay |
+| `app/src/main/java/is/xyz/mpv/MiniSeekBar.kt` | Ultra-thin progress line at bottom |
+| `app/src/main/java/is/xyz/mpv/QuickSettingsPanel.kt` | Long-press quick settings overlay |
+| `app/src/main/java/is/xyz/mpv/LongPressHandler.kt` | D-pad long-press action handler |
+| `app/src/main/java/is/xyz/mpv/WatchHistoryManager.kt` | JSON-backed playback history |
+| `app/src/main/java/is/xyz/mpv/ScreenshotGallery.kt` | Browse/delete screenshots |
+| `app/src/main/java/is/xyz/mpv/PresetManager.kt` | Fetch/apply presets from GitHub Pages |
+| `app/src/main/java/is/xyz/mpv/KeyMappingManager.kt` | Key binding model + export |
+| `app/src/main/java/is/xyz/mpv/DeviceProfileManager.kt` | Hardware detection + recommendations |
+| `app/src/main/java/is/xyz/mpv/ShizukuHelper.kt` | Optional Shizuku-enhanced detection |
+| `app/src/main/java/is/xyz/mpv/UrlHistoryManager.kt` | URL history + M3U parser |
+| `bridge/` | Intent bridge APK (`is.xyz.mpv` → `com.qutaiba.mpvtv`) |
+| `presets/` | JSON presets served via GitHub Pages |
+| `.github/workflows/build-release.yml` | Build APK on tag push |
+| `.github/workflows/sync-upstream.yml` | Weekly upstream sync check |
 
 ## Rule 2: New Files Over Edits
 
@@ -75,7 +90,10 @@ Never reformat, rename, refactor, or "clean up" upstream code. Every diff line i
 | Last synced commit | `7cc841e` (buildscripts: update harfbuzz) |
 | Last sync date | 2026-08-18 |
 | Our package | `com.qutaiba.mpvtv` |
+| Bridge package | `is.xyz.mpv` (intent forwarder) |
 | Our branch | `dev` |
+| Upstream edits | 5 files, ~15 lines (all marked `// mpv-tv:`) |
+| New files | 22 (zero merge risk) |
 
 Update this table on every upstream sync.
 
