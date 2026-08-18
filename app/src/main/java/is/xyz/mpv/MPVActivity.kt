@@ -259,32 +259,8 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, TouchGesturesObse
     override fun onCreate(icicle: Bundle?) {
         super.onCreate(icicle)
 
-        // mpv-tv: verify external storage at startup with visible feedback
-        val extDir = getExternalFilesDir(null)
-        var configTarget: java.io.File
-        if (extDir == null || !extDir.canWrite()) {
-            Log.w(TAG, "mpv-tv: external files dir not writable, falling back to internal")
-            android.widget.Toast.makeText(this,
-                "mpv-tv: external storage unavailable — using internal config",
-                android.widget.Toast.LENGTH_LONG).show()
-            configTarget = filesDir
-        } else {
-            try {
-                val testFile = java.io.File(extDir, ".mpvtv-write-test")
-                testFile.writeText("ok")
-                testFile.delete()
-                configTarget = extDir
-                android.widget.Toast.makeText(this,
-                    "mpv-tv ready — config: ${extDir.absolutePath}",
-                    android.widget.Toast.LENGTH_SHORT).show()
-            } catch (e: Exception) {
-                Log.e(TAG, "mpv-tv: config dir not writable", e)
-                android.widget.Toast.makeText(this,
-                    "mpv-tv: config dir not writable — using internal",
-                    android.widget.Toast.LENGTH_LONG).show()
-                configTarget = filesDir
-            }
-        }
+        // mpv-tv: config dir (init already done in MainActivity, just get the path here)
+        val configTarget = getExternalFilesDir(null) ?: filesDir
         Utils.copyAssets(this, configTarget)
         BackgroundPlaybackService.createNotificationChannel(this)
 
@@ -334,12 +310,8 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, TouchGesturesObse
         }
 
         player.addObserver(this)
-        // mpv-tv: use the same verified dir from startup
+        // mpv-tv: config dir (init done in MainActivity, just get the path)
         val configDir = (getExternalFilesDir(null) ?: filesDir).path
-        TvDefaults.ensureDefaults(this, configDir)
-        MpvTvConfig.load(configDir) // mpv-tv: load custom options
-        WatchHistoryManager.init(this) // mpv-tv: watch history
-        UrlHistoryManager.init(this) // mpv-tv: URL history
         val rootView = binding.root as ViewGroup
         val recOverlay = RecordingOverlay(this, rootView) // mpv-tv
         recordManager = RecordManager(this, recOverlay) // mpv-tv: recording toggle
@@ -353,47 +325,8 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, TouchGesturesObse
             onLongPressSeek = { sec -> MPVLib.command(arrayOf("seek", sec.toString(), "relative")) },
             onQuickPanel = { quickPanel?.toggle() }
         ) // mpv-tv: D-pad long-press
-        // mpv-tv: Shizuku status check (visible)
-        if (ShizukuHelper.isShizukuInstalled(this)) {
-            if (ShizukuHelper.isShizukuAvailable()) {
-                Log.i(TAG, "mpv-tv: Shizuku available")
-            } else {
-                Log.i(TAG, "mpv-tv: Shizuku installed but not running")
-            }
-        }
-
         player.initialize(configDir, cacheDir.path)
         player.playFile(filepath)
-
-        // mpv-tv: first launch prompts
-        val prefs = getSharedPreferences("mpvtv", MODE_PRIVATE)
-        if (BridgeInstaller.shouldShowFirstRunPrompt(this)) {
-            player.postDelayed({ BridgeInstaller.showBridgeDialog(this, isFirstRun = true) }, 2000)
-        }
-        if (!prefs.getBoolean("preset_picked", false)) {
-            player.postDelayed({
-                if (isFinishing || isDestroyed) return@postDelayed
-                val profile = DeviceProfileManager.detect(this)
-                val presets = PresetManager.loadBundledPresets(this)
-                if (presets.isNotEmpty()) {
-                    val recommended = presets.firstOrNull { it.id == profile.recommendedPreset }
-                    val msg = if (recommended != null)
-                        "Recommended for ${profile.model}: ${recommended.name}\n\nApply it?"
-                    else "Choose a preset in Settings > Presets."
-                    android.app.AlertDialog.Builder(this)
-                        .setTitle("First Run — Config Preset")
-                        .setMessage(msg)
-                        .setPositiveButton(recommended?.let { "Apply: ${it.name}" } ?: "OK") { _, _ ->
-                            recommended?.let { PresetManager.applyPreset(this, it) }
-                            prefs.edit().putBoolean("preset_picked", true).apply()
-                        }
-                        .setNegativeButton("Skip") { _, _ ->
-                            prefs.edit().putBoolean("preset_picked", true).apply()
-                        }
-                        .show()
-                }
-            }, 4000)
-        }
 
         mediaSession = initMediaSession()
         updateMediaSession()

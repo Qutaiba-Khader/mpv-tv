@@ -2,7 +2,6 @@ package `is`.xyz.mpv
 
 import android.os.Bundle
 import android.util.Log
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 
 class MainActivity : AppCompatActivity(R.layout.activity_main) {
@@ -31,23 +30,25 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
             MpvTvConfig.load(extDir.path)
             WatchHistoryManager.init(this)
             UrlHistoryManager.init(this)
-            Toast.makeText(this, "mpv-tv ready", Toast.LENGTH_SHORT).show()
             Log.i("mpv-tv", "Config: ${extDir.absolutePath}")
         } else {
-            Toast.makeText(this, "mpv-tv: external storage unavailable", Toast.LENGTH_LONG).show()
-            Log.w("mpv-tv", "External files dir not writable")
+            Log.w("mpv-tv", "External files dir not writable, using internal")
         }
 
         if (ShizukuHelper.isShizukuInstalled(this)) {
             Log.i("mpv-tv", "Shizuku ${if (ShizukuHelper.isShizukuAvailable()) "available" else "not running"}")
         }
 
-        // first-run prompts
+        // first-run prompts (sequential — only one dialog at a time)
         val prefs = getSharedPreferences("mpvtv", MODE_PRIVATE)
-        if (BridgeInstaller.shouldShowFirstRunPrompt(this)) {
+        val showBridge = BridgeInstaller.shouldShowFirstRunPrompt(this)
+        val showPreset = !prefs.getBoolean("preset_picked", false)
+
+        if (showBridge) {
+            // bridge prompt first, preset after dismiss
             BridgeInstaller.showBridgeDialog(this, isFirstRun = true)
-        }
-        if (!prefs.getBoolean("preset_picked", false)) {
+            // preset will show on next launch (bridge dialog sets prompt_shown)
+        } else if (showPreset) {
             val profile = DeviceProfileManager.detect(this)
             val presets = PresetManager.loadBundledPresets(this)
             val recommended = presets.firstOrNull { it.id == profile.recommendedPreset }
@@ -58,7 +59,6 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
                     .setPositiveButton("Apply") { _, _ ->
                         PresetManager.applyPreset(this, recommended)
                         prefs.edit().putBoolean("preset_picked", true).apply()
-                        Toast.makeText(this, "Applied: ${recommended.name}", Toast.LENGTH_SHORT).show()
                     }
                     .setNegativeButton("Skip") { _, _ ->
                         prefs.edit().putBoolean("preset_picked", true).apply()
