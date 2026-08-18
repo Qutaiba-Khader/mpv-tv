@@ -47,7 +47,7 @@ object BridgeInstaller {
             .edit().putBoolean(PREF_KEY, true).apply()
     }
 
-    fun showBridgeDialog(activity: Activity, isFirstRun: Boolean = false) {
+    fun showBridgeDialog(activity: Activity, isFirstRun: Boolean = false, onDismiss: (() -> Unit)? = null) {
         if (activity.isFinishing || activity.isDestroyed) return
         val installed = isBridgeInstalled(activity)
         val isStock = isStockMpvInstalled(activity)
@@ -96,7 +96,10 @@ object BridgeInstaller {
             }
         }
 
-        builder.show()
+        val dialog = builder.show()
+        onDismiss?.let { callback ->
+            dialog.setOnDismissListener { callback() }
+        }
     }
 
     private fun canInstallPackages(context: Context): Boolean {
