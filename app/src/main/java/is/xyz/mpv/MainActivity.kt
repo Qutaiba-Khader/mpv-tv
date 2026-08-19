@@ -5,6 +5,8 @@ import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 
 class MainActivity : AppCompatActivity(R.layout.activity_main) {
+    private val status = mutableListOf<String>()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -22,8 +24,6 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
     }
 
     private fun runStartupChecks() {
-        val status = mutableListOf<String>()
-
         // storage check
         val extDir = getExternalFilesDir(null)
         if (extDir != null && extDir.canWrite()) {
@@ -42,50 +42,61 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
         if (ShizukuHelper.isShizukuInstalled(this)) {
             val available = ShizukuHelper.isShizukuAvailable()
             status.add("Shizuku: ${if (available) "ready" else "not running"}")
-            MpvTvLog.i("mpv-tv", "Shizuku ${if (available) "available" else "not running"}")
         }
 
-        // show status in action bar subtitle (visible but not intrusive)
-        supportActionBar?.subtitle = status.joinToString(" · ")
-
-        // clear subtitle after 5 seconds
-        window.decorView.postDelayed({
-            if (!isFinishing && !isDestroyed) supportActionBar?.subtitle = null
-        }, 5000)
-
-        // first-run prompts
+        // first-run prompts (sequential, status shows AFTER all dialogs)
         val prefs = getSharedPreferences("mpvtv", MODE_PRIVATE)
         val showBridge = BridgeInstaller.shouldShowFirstRunPrompt(this)
         val showPreset = !prefs.getBoolean("preset_picked", false)
 
         if (showBridge) {
             BridgeInstaller.showBridgeDialog(this, isFirstRun = true, onDismiss = {
-                if (showPreset) showPresetPicker(prefs)
+                if (showPreset) {
+                    showPresetPicker(prefs, onDone = { showStatus() })
+                } else {
+                    showStatus()
+                }
             })
         } else if (showPreset) {
-            showPresetPicker(prefs)
+            showPresetPicker(prefs, onDone = { showStatus() })
+        } else {
+            showStatus()
         }
     }
 
-    private fun showPresetPicker(prefs: SharedPreferences) {
+    private fun showPresetPicker(prefs: SharedPreferences, onDone: () -> Unit) {
         if (isFinishing || isDestroyed) return
         val profile = DeviceProfileManager.detect(this)
         val presets = PresetManager.loadBundledPresets(this)
         val recommended = presets.firstOrNull { it.id == profile.recommendedPreset }
         if (recommended != null) {
-            android.app.AlertDialog.Builder(this)
+            val dialog = android.app.AlertDialog.Builder(this)
                 .setTitle("Recommended Preset")
                 .setMessage("For ${profile.model}: ${recommended.name}\n\n${recommended.description}")
                 .setPositiveButton("Apply") { _, _ ->
                     PresetManager.applyPreset(this, recommended)
                     prefs.edit().putBoolean("preset_picked", true).apply()
+                    status.add("Preset: ${recommended.name}")
                 }
                 .setNegativeButton("Skip") { _, _ ->
                     prefs.edit().putBoolean("preset_picked", true).apply()
+                    status.add("Preset: skipped")
                 }
-                .show()
+                .create()
+            dialog.setOnDismissListener { onDone() }
+            dialog.show()
         } else {
             prefs.edit().putBoolean("preset_picked", true).apply()
+            onDone()
         }
+    }
+
+    private fun showStatus() {
+        if (isFinishing || isDestroyed) return
+        supportActionBar?.subtitle = status.joinToString(" · ")
+        // clear after 8 seconds
+        window.decorView.postDelayed({
+            if (!isFinishing && !isDestroyed) supportActionBar?.subtitle = null
+        }, 8000)
     }
 }
