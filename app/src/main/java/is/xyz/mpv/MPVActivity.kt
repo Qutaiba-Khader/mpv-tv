@@ -85,11 +85,6 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, TouchGesturesObse
 
     private lateinit var binding: PlayerBinding
     private lateinit var gestures: TouchGestures
-    private var recordManager: RecordManager? = null // mpv-tv: recording toggle
-    private var currentFilepath: String? = null // mpv-tv: for watch history
-    private var miniSeekBarEnabled = false // mpv-tv: thin seekbar style
-    private var quickPanel: QuickSettingsPanel? = null // mpv-tv: quick settings overlay
-    private var longPressHandler: LongPressHandler? = null // mpv-tv: D-pad long-press
 
     // convenience alias
     private val player get() = binding.player
@@ -259,9 +254,9 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, TouchGesturesObse
     override fun onCreate(icicle: Bundle?) {
         super.onCreate(icicle)
 
-        // mpv-tv: config dir (init already done in MainActivity, just get the path here)
-        val configTarget = getExternalFilesDir(null) ?: filesDir
-        Utils.copyAssets(this, configTarget)
+        // Do these here and not in MainActivity because mpv can be launched from a file browser
+        // mpv-tv: copy assets to external dir
+        Utils.copyAssets(this, getExternalFilesDir(null))
         BackgroundPlaybackService.createNotificationChannel(this)
 
         binding = PlayerBinding.inflate(layoutInflater)
@@ -297,7 +292,6 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, TouchGesturesObse
 
         // Parse the intent
         val filepath = parsePathFromIntent(intent)
-        currentFilepath = filepath // mpv-tv: save for watch history
         if (intent.action == Intent.ACTION_VIEW) {
             parseIntentExtras(intent.extras)
         }
@@ -310,21 +304,8 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, TouchGesturesObse
         }
 
         player.addObserver(this)
-        // mpv-tv: config dir (init done in MainActivity, just get the path)
-        val configDir = (getExternalFilesDir(null) ?: filesDir).path
-        val rootView = binding.root as ViewGroup
-        val recOverlay = RecordingOverlay(this, rootView) // mpv-tv
-        recordManager = RecordManager(this, recOverlay) // mpv-tv: recording toggle
-        // mpv-tv: apply mini seekbar style if configured
-        miniSeekBarEnabled = MpvTvConfig.getString("mpvtv-seekbar", "normal") == "mini"
-        if (miniSeekBarEnabled) applyMiniSeekbarStyle()
-        quickPanel = QuickSettingsPanel(this, rootView).apply { // mpv-tv: quick settings
-            onRecordToggle = { toggleRecording() }
-        }
-        longPressHandler = LongPressHandler(
-            onLongPressSeek = { sec -> MPVLib.command(arrayOf("seek", sec.toString(), "relative")) },
-            onQuickPanel = { quickPanel?.toggle() }
-        ) // mpv-tv: D-pad long-press
+        // mpv-tv: external config dir (ADB-writable)
+        val configDir = getExternalFilesDir(null)?.path ?: filesDir.path
         player.initialize(configDir, cacheDir.path)
         player.playFile(filepath)
 
@@ -360,21 +341,6 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, TouchGesturesObse
             result.putExtra("position", psc.position.toInt())
             result.putExtra("duration", psc.duration.toInt())
         }
-        // mpv-tv: extended result extras
-        try {
-            val eofReached = MPVLib.getPropertyBoolean("eof-reached") ?: false
-            result.putExtra("completed", eofReached)
-            MPVLib.getPropertyString("media-title")?.let {
-                if (it.isNotEmpty()) result.putExtra("media-title", it)
-            }
-            MPVLib.getPropertyInt("width")?.let { result.putExtra("video-width", it) }
-            MPVLib.getPropertyInt("height")?.let { result.putExtra("video-height", it) }
-            MPVLib.getPropertyDouble("speed")?.let { result.putExtra("speed", it.toFloat()) }
-        } catch (_: Exception) {}
-        recordManager?.let { rm ->
-            if (rm.isRecording) rm.stop()
-            rm.lastRecordingPath?.let { result.putExtra("recording-path", it) }
-        }
         setResult(code, result)
         finish()
     }
@@ -408,9 +374,6 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, TouchGesturesObse
         // take the background service with us
         stopServiceRunnable.run()
 
-        recordManager?.destroy() // mpv-tv: stop recording on exit
-        longPressHandler?.destroy() // mpv-tv
-        // mpv-tv: history already saved in onPause, no need to duplicate here
         player.removeObserver(this)
         player.destroy()
         super.onDestroy()
@@ -505,13 +468,6 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, TouchGesturesObse
 
         activityIsForeground = false
         eventUiHandler.removeCallbacksAndMessages(null)
-        // mpv-tv: save watch history on every pause (app might be killed without onDestroy)
-        try {
-            val title = MPVLib.getPropertyString("media-title") ?: ""
-            val pos = (MPVLib.getPropertyDouble("time-pos") ?: 0.0).toLong()
-            val dur = (MPVLib.getPropertyDouble("duration") ?: 0.0).toLong()
-            if (dur > 0) WatchHistoryManager.addEntry(currentFilepath ?: "", title, pos, dur)
-        } catch (_: Exception) {}
         if (isFinishing) {
             savePosition()
             // tell mpv to shut down so that any other property changes or such are ignored,
@@ -849,12 +805,6 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, TouchGesturesObse
             return super.dispatchKeyEvent(ev)
         }
 
-        // mpv-tv: quick panel intercepts keys when visible
-        if (quickPanel?.handleKey(ev) == true) return true
-        // mpv-tv: long-press detection for D-pad
-        if (ev.action == KeyEvent.ACTION_DOWN) longPressHandler?.onKeyDown(ev)
-        if (ev.action == KeyEvent.ACTION_UP && longPressHandler?.onKeyUp(ev) == true) return true
-
         // try built-in event handler first, forward all other events to libmpv
         val handled = interceptDpad(ev) ||
                 (ev.action == KeyEvent.ACTION_DOWN && interceptKeyDown(ev)) ||
@@ -1012,9 +962,6 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, TouchGesturesObse
 
             // (overrides a default binding)
             KeyEvent.KEYCODE_ENTER -> player.cyclePause()
-
-            // mpv-tv: recording toggle on RECORD key or KEYCODE_R
-            KeyEvent.KEYCODE_MEDIA_RECORD -> toggleRecording()
 
             else -> unhandled++
         }
@@ -1235,60 +1182,6 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, TouchGesturesObse
                 pushOption("force-media-title", it)
         }
         // TODO: `headers` would be good, maybe `tls_verify`
-
-        // mpv-tv: extended intent extras for external app control
-        // Any app can pass these to customize playback per-launch.
-        // All use file-local-options so they only affect this file.
-
-        // Profile (e.g., "low-latency" for live streams)
-        extras.getString("profile")?.let {
-            onloadCommands.add(arrayOf("apply-profile", it))
-            Log.v(TAG, "mpv-tv: applying profile from intent: $it")
-        }
-
-        // Video options
-        extras.getString("aspect")?.let { pushOption("video-aspect-override", it) }
-        extras.getString("panscan")?.let { pushOption("panscan", it) }
-        extras.getString("hwdec")?.let { pushOption("hwdec", it) }
-        extras.getString("vo")?.let { pushOption("vo", it) }
-
-        // Audio options
-        extras.getString("audio-delay")?.let { pushOption("audio-delay", it) }
-        extras.getString("volume")?.let { pushOption("volume", it) }
-        extras.getString("audio-spdif")?.let { pushOption("audio-spdif", it) }
-
-        // Playback control
-        if (extras.getBoolean("no-resume", false))
-            pushOption("resume-playback", "no")
-        if (extras.getBoolean("pause", false))
-            pushOption("pause", "yes")
-        if (extras.getBoolean("no-pause", false))
-            pushOption("pause", "no")
-        if (extras.getBoolean("loop", false))
-            pushOption("loop-file", "inf")
-
-        // Buffering / demuxer (for live vs VOD)
-        extras.getString("demuxer-max-bytes")?.let { pushOption("demuxer-max-bytes", it) }
-        extras.getString("demuxer-readahead-secs")?.let { pushOption("demuxer-readahead-secs", it) }
-        extras.getString("cache")?.let { pushOption("cache", it) }
-
-        // OSD message at playback start
-        extras.getString("osd-message")?.let { msg ->
-            val dur = extras.getInt("osd-duration", 3000)
-            onloadCommands.add(arrayOf("show-text", msg, dur.toString()))
-        }
-
-        // Arbitrary mpv options (pipe-separated key=value pairs)
-        // e.g., "deband=yes|deinterlace=yes|speed=1.5"
-        extras.getString("mpv-options")?.let { opts ->
-            opts.split("|").forEach { pair ->
-                val parts = pair.split("=", limit = 2)
-                if (parts.size == 2) {
-                    pushOption(parts[0].trim(), parts[1].trim())
-                    Log.v(TAG, "mpv-tv: option from intent: ${parts[0]}=${parts[1]}")
-                }
-            }
-        }
     }
 
     // UI (Part 2)
@@ -1310,43 +1203,6 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, TouchGesturesObse
             "$trackPrefix $trackName"
         }
         showToast(msg, true)
-    }
-
-    // mpv-tv: mini seekbar style — thin line, no time labels, always visible at bottom
-    private fun applyMiniSeekbarStyle() {
-        val seekbar = binding.playbackSeekbar
-        val group = binding.controlsSeekbarGroup
-
-        // hide time labels and prev/next buttons, keep only seekbar
-        binding.playbackPositionTxt.visibility = View.GONE
-        binding.playbackDurationTxt.visibility = View.GONE
-        binding.prevBtn.visibility = View.GONE
-        binding.nextBtn.visibility = View.GONE
-
-        // restyle seekbar: thin, semi-transparent
-        seekbar.minimumHeight = 6
-        seekbar.maxHeight = 6
-        seekbar.thumb = null
-        seekbar.alpha = MpvTvConfig.seekbarOpacity
-
-        // move seekbar group to bottom of screen by adjusting layout
-        val params = group.layoutParams
-        if (params is android.widget.RelativeLayout.LayoutParams) {
-            params.removeRule(android.widget.RelativeLayout.ABOVE)
-            params.addRule(android.widget.RelativeLayout.ALIGN_PARENT_BOTTOM)
-            params.height = android.view.ViewGroup.LayoutParams.WRAP_CONTENT
-            group.layoutParams = params
-        }
-    }
-
-    // mpv-tv: recording toggle with OSD feedback
-    private fun toggleRecording() {
-        val rm = recordManager ?: return
-        val name = rm.toggle()
-        if (rm.isRecording)
-            showToast("REC started: $name")
-        else
-            showToast("REC saved: $name")
     }
 
     private fun cycleAudio() = trackSwitchNotification {
