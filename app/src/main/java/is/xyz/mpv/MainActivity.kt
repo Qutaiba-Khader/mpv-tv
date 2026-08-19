@@ -93,10 +93,7 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
 
     private fun showStatus() {
         if (isFinishing || isDestroyed) return
-        supportActionBar?.subtitle = status.joinToString(" · ")
-        // clear after 8 seconds
-        window.decorView.postDelayed({
-            if (!isFinishing && !isDestroyed) supportActionBar?.subtitle = null
-        }, 8000)
+        val msg = status.joinToString(" · ")
+        android.widget.Toast.makeText(this, msg, android.widget.Toast.LENGTH_LONG).show()
     }
 }
